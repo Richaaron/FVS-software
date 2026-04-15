@@ -1,0 +1,15 @@
+{
+  "schoolName": "Folusho Victory Schools",
+  "schoolType": "primary",
+  "academicSession": "2025/2026",
+  "term": "First Term",
+  "admin": {
+    "username": "admin",
+    "password": "$2a$10$TzXQ3Bp62xI4jOT/3h1aquMmg/Fp0TwV7FsC94yZwP3OGi/lf3cxW"
+  },
+  "teachers": [],
+  "students": [],
+  "subjects": [],
+  "scores": [],
+  "activities": []
+}
