@@ -1011,12 +1011,13 @@
                     <form onsubmit="addStudent(event)">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Admission Number *</label>
-                                <input type="text" id="admission_number" required>
-                            </div>
-                            <div class="form-group">
                                 <label>Class *</label>
                                 <select id="student_class" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Photo</label>
+                                <input type="file" id="student_photo" accept="image/*">
+                                <small style="color: #666;">Optional: JPG, PNG, GIF, or WebP (max 5MB)</small>
                             </div>
                         </div>
 
@@ -1096,12 +1097,13 @@
                     <form onsubmit="addTeacher(event)">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Staff ID *</label>
-                                <input type="text" id="staff_id" required>
-                            </div>
-                            <div class="form-group">
                                 <label>School *</label>
                                 <select id="teacher_school" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Photo</label>
+                                <input type="file" id="teacher_photo" accept="image/*">
+                                <small style="color: #666;">Optional: JPG, PNG, GIF, or WebP (max 5MB)</small>
                             </div>
                         </div>
 
@@ -1578,16 +1580,27 @@
             document.getElementById(tabId).classList.add('active');
         }
 
-        async function fetchAPI(endpoint, options = {}) {
+        async function fetchAPI(endpoint, options = {}, stringifyBody = true) {
             try {
-                const headers = {
+                const headers = stringifyBody ? {
                     'Content-Type': 'application/json',
+                    ...options.headers
+                } : {
                     ...options.headers
                 };
                 
                 // Add authorization token if available
                 if (authToken) {
                     headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                // If body is FormData, stringify is false
+                if (!stringifyBody && options.body instanceof FormData) {
+                    // Don't set Content-Type, let browser set it with boundary
+                    delete headers['Content-Type'];
+                } else if (stringifyBody && options.body && typeof options.body === 'object') {
+                    // stringify object body if needed
+                    options.body = JSON.stringify(options.body);
                 }
                 
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -1673,28 +1686,34 @@
         async function addStudent(e) {
             e.preventDefault();
 
-            const student = {
-                school_id: currentSchool.id,
-                class_id: parseInt(document.getElementById('student_class').value),
-                admission_number: document.getElementById('admission_number').value,
-                first_name: document.getElementById('first_name').value,
-                last_name: document.getElementById('last_name').value,
-                middle_name: document.getElementById('middle_name').value,
-                date_of_birth: document.getElementById('date_of_birth').value || null,
-                gender: document.getElementById('gender').value,
-                email: document.getElementById('student_email').value,
-                parent_name: document.getElementById('parent_name').value,
-                parent_phone: document.getElementById('parent_phone').value,
-                is_active: true
-            };
+            const formData = new FormData();
+            formData.append('school_id', currentSchool.id);
+            formData.append('class_id', parseInt(document.getElementById('student_class').value));
+            formData.append('first_name', document.getElementById('first_name').value);
+            formData.append('last_name', document.getElementById('last_name').value);
+            formData.append('middle_name', document.getElementById('middle_name').value);
+            formData.append('date_of_birth', document.getElementById('date_of_birth').value || null);
+            formData.append('gender', document.getElementById('gender').value);
+            formData.append('email', document.getElementById('student_email').value);
+            formData.append('parent_name', document.getElementById('parent_name').value);
+            formData.append('parent_phone', document.getElementById('parent_phone').value);
+            formData.append('is_active', 'true');
+
+            // Add photo if provided
+            const photoFile = document.getElementById('student_photo').files[0];
+            if (photoFile) {
+                formData.append('photo', photoFile);
+            }
 
             const result = await fetchAPI('/students', {
                 method: 'POST',
-                body: JSON.stringify(student)
-            });
+                body: formData,
+                headers: {} // Let browser set Content-Type for FormData
+            }, false); // false = don't JSON.stringify
 
             if (result) {
-                showAlert('Student added successfully!', 'success');
+                const admissionNumber = result.admission_number || 'N/A';
+                showAlert(`Student added successfully!\n\nAdmission Number: ${admissionNumber}`, 'success');
                 e.target.reset();
                 loadStudents();
             }
@@ -1748,22 +1767,27 @@
         async function addTeacher(e) {
             e.preventDefault();
 
-            const teacher = {
-                school_id: currentSchool.id,
-                staff_id: document.getElementById('staff_id').value,
-                first_name: document.getElementById('teacher_first_name').value,
-                last_name: document.getElementById('teacher_last_name').value,
-                email: document.getElementById('teacher_email').value,
-                phone: document.getElementById('teacher_phone').value,
-                qualification: document.getElementById('qualification').value,
-                specialization: document.getElementById('specialization').value,
-                is_active: true
-            };
+            const formData = new FormData();
+            formData.append('school_id', currentSchool.id);
+            formData.append('first_name', document.getElementById('teacher_first_name').value);
+            formData.append('last_name', document.getElementById('teacher_last_name').value);
+            formData.append('email', document.getElementById('teacher_email').value);
+            formData.append('phone', document.getElementById('teacher_phone').value);
+            formData.append('qualification', document.getElementById('qualification').value);
+            formData.append('specialization', document.getElementById('specialization').value);
+            formData.append('is_active', 'true');
+
+            // Add photo if provided
+            const photoFile = document.getElementById('teacher_photo').files[0];
+            if (photoFile) {
+                formData.append('photo', photoFile);
+            }
 
             const result = await fetchAPI('/teachers', {
                 method: 'POST',
-                body: JSON.stringify(teacher)
-            });
+                body: formData,
+                headers: {} // Let browser set Content-Type for FormData
+            }, false); // false = don't JSON.stringify
 
             if (result) {
                 // Show credentials modal
@@ -1782,7 +1806,7 @@
                     
                     <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #00d4ff;">
                         <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;"><strong>Teacher Name:</strong> ${teacher.full_name}</p>
-                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;"><strong>Staff ID:</strong> ${teacher.staff_id}</p>
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;"><strong>Staff ID:</strong> <span style="color: #0099ff; font-weight: bold;">${credentials.staff_id}</span></p>
                         <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;"><strong>Email:</strong> ${credentials.email}</p>
                     </div>
 
@@ -1800,8 +1824,8 @@
                     </div>
 
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="copyTeacherCredentials('${credentials.username}', '${credentials.password}')" style="flex: 1; min-width: 150px;">📋 Copy Credentials</button>
-                        <button class="btn btn-secondary" onclick="printTeacherCredentials('${teacher.full_name}', '${credentials.username}', '${credentials.password}', '${credentials.email}')" style="flex: 1; min-width: 150px;">🖨️ Print</button>
+                        <button class="btn btn-primary" onclick="copyTeacherCredentials('${credentials.username}', '${credentials.password}', '${credentials.staff_id}')" style="flex: 1; min-width: 150px;">📋 Copy Credentials</button>
+                        <button class="btn btn-secondary" onclick="printTeacherCredentials('${teacher.full_name}', '${credentials.username}', '${credentials.password}', '${credentials.email}', '${credentials.staff_id}')" style="flex: 1; min-width: 150px;">🖨️ Print</button>
                         <button class="btn btn-success" onclick="dismissCredentialsModal()" style="flex: 1; min-width: 150px;">Done</button>
                     </div>
                 </div>
@@ -1810,16 +1834,16 @@
             showAlert(html, 'success');
         }
 
-        function copyTeacherCredentials(username, password) {
-            const credentials = `Username: ${username}\nPassword: ${password}`;
+        function copyTeacherCredentials(username, password, staffId) {
+            const credentials = `Staff ID: ${staffId}\nUsername: ${username}\nPassword: ${password}`;
             navigator.clipboard.writeText(credentials).then(() => {
                 alert('Credentials copied to clipboard!');
             }).catch(() => {
-                alert('Failed to copy. Please copy manually:\nUsername: ' + username + '\nPassword: ' + password);
+                alert('Failed to copy. Please copy manually:\nStaff ID: ' + staffId + '\nUsername: ' + username + '\nPassword: ' + password);
             });
         }
 
-        function printTeacherCredentials(name, username, password, email) {
+        function printTeacherCredentials(name, username, password, email, staffId) {
             const printWindow = window.open('', '', 'height=400,width=600');
             printWindow.document.write(`
                 <html><head><title>Teacher Login Credentials</title>
@@ -1839,6 +1863,7 @@
                     <p><strong>Teacher Name:</strong> ${name}</p>
                     <p><strong>Email:</strong> ${email}</p>
                     <div class="credentials">
+                        <p><span class="label">Staff ID:</span><br><span class="value">${staffId}</span></p>
                         <p><span class="label">Username:</span><br><span class="value">${username}</span></p>
                         <p><span class="label">Password:</span><br><span class="value">${password}</span></p>
                     </div>

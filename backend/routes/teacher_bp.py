@@ -1,29 +1,49 @@
 """
 Teacher routes
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, Teacher, User
 from datetime import datetime
 from .auth_utils import require_auth, require_role
 from .teacher_utils import generate_username, generate_password
+from .id_generator import generate_staff_id, save_teacher_photo
+from .validation_utils import validate_name, validate_email
 
 teacher_bp = Blueprint('teacher', __name__, url_prefix='/api/teachers')
 
 @teacher_bp.route('', methods=['POST'])
 @require_role('admin')
 def create_teacher():
-    """Create a new teacher with auto-generated credentials"""
+    """Create a new teacher with auto-generated credentials and staff ID"""
     try:
-        data = request.get_json()
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            photo_file = None
+        else:
+            data = request.form.to_dict()
+            photo_file = request.files.get('photo')
         
-        required = ['school_id', 'staff_id', 'first_name', 'last_name', 'email']
+        required = ['school_id', 'first_name', 'last_name', 'email']
         if not all(k in data for k in required):
-            return jsonify({'error': 'Missing required fields: school_id, staff_id, first_name, last_name, email'}), 400
+            return jsonify({'error': 'Missing required fields: school_id, first_name, last_name, email'}), 400
         
-        # Check if teacher with same staff_id exists
-        existing_staff = Teacher.query.filter_by(staff_id=data['staff_id']).first()
-        if existing_staff:
-            return jsonify({'error': 'Staff ID already exists'}), 400
+        # Validate inputs
+        is_valid, error_msg = validate_name(data['first_name'], 'First name')
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
+        is_valid, error_msg = validate_name(data['last_name'], 'Last name')
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
+        is_valid, error_msg = validate_email(data['email'])
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
+        # Auto-generate staff_id
+        school_id = int(data['school_id'])
+        staff_id = generate_staff_id(school_id)
         
         # Check if email already has a user account
         existing_user = User.query.filter_by(email=data['email']).first()
@@ -31,7 +51,7 @@ def create_teacher():
             return jsonify({'error': 'Email already in use'}), 400
         
         # Generate unique username and password
-        username = generate_username(data['first_name'], data['last_name'], data['staff_id'])
+        username = generate_username(data['first_name'], data['last_name'], staff_id)
         password = generate_password(12)
         
         # Create User account for teacher
@@ -48,18 +68,28 @@ def create_teacher():
         # Create Teacher record
         teacher = Teacher(
             user_id=user.id,
-            school_id=data['school_id'],
-            staff_id=data['staff_id'],
+            school_id=school_id,
+            staff_id=staff_id,
             first_name=data['first_name'],
             last_name=data['last_name'],
             email=data['email'],
             phone=data.get('phone'),
             qualification=data.get('qualification'),
             specialization=data.get('specialization'),
-            is_active=data.get('is_active', True)
+            is_active=data.get('is_active', 'true').lower() == 'true'
         )
         
         db.session.add(teacher)
+        db.session.flush()  # Get teacher ID before committing
+        
+        # Handle photo upload
+        if photo_file:
+            success, filename, error = save_teacher_photo(photo_file, teacher.id)
+            if success:
+                teacher.photo_filename = filename
+            else:
+                current_app.logger.warning(f"Failed to save teacher photo: {error}")
+        
         db.session.commit()
         
         # Return teacher info WITH auto-generated credentials
@@ -68,6 +98,7 @@ def create_teacher():
         response['auto_generated_credentials'] = {
             'username': username,
             'password': password,
+            'staff_id': staff_id,
             'email': data['email'],
             'note': 'These credentials are auto-generated. Teacher should change password on first login.'
         }
@@ -75,6 +106,7 @@ def create_teacher():
         return jsonify(response), 201
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Teacher creation error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @teacher_bp.route('', methods=['GET'])

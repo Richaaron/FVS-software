@@ -203,6 +203,7 @@ class Student(db.Model):
     phone = db.Column(db.String(20))
     parent_name = db.Column(db.String(100))
     parent_phone = db.Column(db.String(20))
+    photo_filename = db.Column(db.String(255))  # Student photo/picture
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -223,6 +224,8 @@ class Student(db.Model):
             'gender': self.gender,
             'email': self.email,
             'parent_name': self.parent_name,
+            'photo_filename': self.photo_filename,
+            'photo_url': f"/api/photos/student/{self.photo_filename}" if self.photo_filename else None,
             'is_active': self.is_active
         }
 
@@ -241,6 +244,7 @@ class Teacher(db.Model):
     phone = db.Column(db.String(20))
     qualification = db.Column(db.String(100))
     specialization = db.Column(db.String(100))
+    photo_filename = db.Column(db.String(255))  # Teacher photo/picture
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -256,6 +260,8 @@ class Teacher(db.Model):
             'full_name': f"{self.first_name} {self.last_name}",
             'email': self.email,
             'specialization': self.specialization,
+            'photo_filename': self.photo_filename,
+            'photo_url': f"/api/photos/teacher/{self.photo_filename}" if self.photo_filename else None,
             'is_active': self.is_active
         }
 

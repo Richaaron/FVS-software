@@ -1,7 +1,7 @@
 """
 Flask application factory for FVS Result Management System
 """
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory, render_template_string, request
 from flask_cors import CORS
 from config import config
 from models import db, User
@@ -13,6 +13,11 @@ def create_app(config_name=None):
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'development')
     
+    # Get the absolute path to frontend folder
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    frontend_path = os.path.join(current_dir, '..', 'frontend')
+    frontend_path = os.path.abspath(frontend_path)
+    
     app = Flask(__name__)
     
     # Load configuration
@@ -23,7 +28,7 @@ def create_app(config_name=None):
     CORS(app)
     
     # Register blueprints
-    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp
+    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp, photo_bp
     
     app.register_blueprint(auth_bp.auth_bp)
     app.register_blueprint(school_bp.school_bp)
@@ -36,10 +41,55 @@ def create_app(config_name=None):
     app.register_blueprint(parent_bp.parent_bp)
     app.register_blueprint(analytics_bp.analytics_bp)
     app.register_blueprint(export_bp.export_bp)
+    app.register_blueprint(photo_bp.photo_bp)
+    
+    # Serve frontend files
+    @app.route('/')
+    def root():
+        """Serve login page at root"""
+        try:
+            return send_from_directory(frontend_path, 'login.html')
+        except:
+            return jsonify({'error': 'Frontend not found'}), 404
+    
+    @app.route('/<path:filename>')
+    def serve_files(filename):
+        """Serve static files from frontend"""
+        try:
+            file_path = os.path.join(frontend_path, filename)
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                return send_from_directory(frontend_path, filename)
+        except:
+            pass
+        
+        # If file not found and it's an HTML request, serve login.html (SPA fallback)
+        if filename.endswith('.html'):
+            try:
+                return send_from_directory(frontend_path, 'login.html'), 404
+            except:
+                pass
+        
+        return jsonify({'error': 'Resource not found'}), 404
     
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
+        # Try to serve from frontend for HTML files
+        if request.path.endswith('.html'):
+            try:
+                return send_from_directory(frontend_path, 'login.html')
+            except:
+                return jsonify({'error': 'Resource not found'}), 404
+        # For API routes, return JSON error
+        if request.path.startswith('/api'):
+            return jsonify({'error': 'Resource not found'}), 404
+        # Otherwise try to serve from frontend
+        try:
+            requested_file = request.path.lstrip('/')
+            if os.path.exists(os.path.join(frontend_path, requested_file)):
+                return send_from_directory(frontend_path, requested_file)
+        except:
+            pass
         return jsonify({'error': 'Resource not found'}), 404
     
     @app.errorhandler(500)
