@@ -28,7 +28,7 @@ def create_app(config_name=None):
     CORS(app)
     
     # Register blueprints
-    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp, photo_bp
+    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp, photo_bp, email_bp
     
     app.register_blueprint(auth_bp.auth_bp)
     app.register_blueprint(school_bp.school_bp)
@@ -42,6 +42,7 @@ def create_app(config_name=None):
     app.register_blueprint(analytics_bp.analytics_bp)
     app.register_blueprint(export_bp.export_bp)
     app.register_blueprint(photo_bp.photo_bp)
+    app.register_blueprint(email_bp.email_bp)
     
     # Serve frontend files
     @app.route('/')

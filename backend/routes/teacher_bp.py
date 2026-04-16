@@ -8,6 +8,7 @@ from .auth_utils import require_auth, require_role
 from .teacher_utils import generate_username, generate_password
 from .id_generator import generate_staff_id, save_teacher_photo
 from .validation_utils import validate_name, validate_email
+from .email_utils import send_credentials_email
 
 teacher_bp = Blueprint('teacher', __name__, url_prefix='/api/teachers')
 
@@ -102,6 +103,23 @@ def create_teacher():
             'email': data['email'],
             'note': 'These credentials are auto-generated. Teacher should change password on first login.'
         }
+        
+        # Optional: Send credentials via email if requested
+        send_email = data.get('send_email', 'false').lower() == 'true'
+        if send_email:
+            full_name = f"{data['first_name']} {data['last_name']}"
+            email_sent = send_credentials_email(
+                recipient_email=data['email'],
+                recipient_name=full_name,
+                username=username,
+                password=password,
+                role='teacher'
+            )
+            response['email_sent'] = email_sent
+            if email_sent:
+                response['email_message'] = f'Credentials sent to {data["email"]}'
+            else:
+                response['email_message'] = 'Failed to send credentials email. Check SMTP configuration.'
         
         return jsonify(response), 201
     except Exception as e:

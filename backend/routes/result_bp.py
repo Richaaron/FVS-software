@@ -1,10 +1,11 @@
 """
 Result routes with role-based access control
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, Result, Student, Subject, Term, Teacher, Parent, User
 from sqlalchemy import func
 from routes.auth_utils import require_auth, require_role, get_token_from_request
+from routes.email_utils import send_result_notification_email
 import jwt
 import os
 
@@ -27,7 +28,11 @@ def get_user_from_token():
 @result_bp.route('', methods=['POST'])
 @require_role('admin', 'teacher')
 def create_result():
-    """Create or update a result with CA1, CA2, and Exam scores (admin and teacher only)"""
+    """Create or update a result with CA1, CA2, and Exam scores (admin and teacher only)
+    
+    Optional parameters:
+        send_email: boolean - Send result notification to parent (default: false)
+    """
     try:
         data = request.get_json()
         
@@ -68,7 +73,39 @@ def create_result():
         db.session.add(result)
         db.session.commit()
         
-        return jsonify(result.to_dict()), 201
+        response = result.to_dict()
+        
+        # Optional: Send result notification to parent if requested
+        send_email = data.get('send_email', False)
+        if send_email:
+            try:
+                student = Student.query.get(result.student_id)
+                parent = Parent.query.get(student.parent_id) if student else None
+                subject = Subject.query.get(result.subject_id)
+                
+                if parent and student and subject:
+                    student_name = f"{student.first_name} {student.last_name}"
+                    email_sent = send_result_notification_email(
+                        recipient_email=parent.email,
+                        student_name=student_name,
+                        subject=subject.name,
+                        score=result.total_score,
+                        grade=result.grade
+                    )
+                    response['email_sent'] = email_sent
+                    if email_sent:
+                        response['email_message'] = f'Result notification sent to {parent.email}'
+                    else:
+                        response['email_message'] = 'Result saved but failed to send email notification'
+                else:
+                    response['email_sent'] = False
+                    response['email_message'] = 'Parent information incomplete - email not sent'
+            except Exception as email_error:
+                current_app.logger.error(f"Failed to send result email: {str(email_error)}")
+                response['email_sent'] = False
+                response['email_message'] = f'Email error: {str(email_error)}'
+        
+        return jsonify(response), 201
     except ValueError:
         return jsonify({'error': 'Invalid score values. Scores must be numeric'}), 400
     except Exception as e:
