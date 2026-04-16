@@ -16,6 +16,8 @@ class User(db.Model):
     username = db.Column(db.String(100), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    password_reset_token = db.Column(db.String(255), nullable=True)  # For forgot password flow
+    password_reset_expiry = db.Column(db.DateTime, nullable=True)  # Token expiry time
     role = db.Column(db.String(20), nullable=False)  # admin, teacher, parent
     is_active = db.Column(db.Boolean, default=True)
     

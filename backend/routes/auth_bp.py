@@ -1,11 +1,16 @@
 """
 Authentication routes
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, User, Teacher, Parent, Student
 from datetime import datetime, timedelta
 import jwt
 import os
+import secrets
+import hashlib
+from .validation_utils import validate_email, validate_username, validate_password
+from .audit_logger import log_login, log_password_change
+from .email_utils import send_password_reset_email, send_credentials_email
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -20,26 +25,47 @@ def register():
         
         required = ['username', 'email', 'password', 'role']
         if not all(k in data for k in required):
-            return jsonify({'error': 'Missing required fields'}), 400
+            return jsonify({'error': 'Missing required fields: username, email, password, role'}), 400
         
-        if data['role'] not in ['admin', 'teacher', 'parent']:
-            return jsonify({'error': 'Invalid role'}), 400
+        # Validate inputs
+        username = data['username'].strip()
+        email = data['email'].strip().lower()
+        password = data['password']
+        role = data['role'].strip().lower()
+        
+        # Validate email
+        is_valid, error_msg = validate_email(email)
+        if not is_valid:
+            return jsonify({'error': f'Email validation: {error_msg}'}), 400
+        
+        # Validate username
+        is_valid, error_msg = validate_username(username)
+        if not is_valid:
+            return jsonify({'error': f'Username validation: {error_msg}'}), 400
+        
+        # Validate password strength
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            return jsonify({'error': f'Password validation: {error_msg}'}), 400
+        
+        if role not in ['admin', 'teacher', 'parent']:
+            return jsonify({'error': 'Invalid role. Must be: admin, teacher, or parent'}), 400
         
         # Check if user exists
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already exists'}), 400
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 409
         
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': 'Email already exists'}), 400
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already exists'}), 409
         
         # Create new user
         user = User(
-            username=data['username'],
-            email=data['email'],
-            role=data['role'],
+            username=username,
+            email=email,
+            role=role,
             is_active=True
         )
-        user.set_password(data['password'])
+        user.set_password(password)
         
         db.session.add(user)
         db.session.commit()
@@ -47,6 +73,7 @@ def register():
         return jsonify(user.to_dict()), 201
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Registration error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
@@ -58,13 +85,21 @@ def login():
         if not data or not data.get('username') or not data.get('password'):
             return jsonify({'error': 'Missing username or password'}), 400
         
-        user = User.query.filter_by(username=data['username']).first()
+        username = data['username'].strip()
+        password = data['password']
         
-        if not user or not user.check_password(data['password']):
+        user = User.query.filter_by(username=username).first()
+        
+        if not user or not user.check_password(password):
+            log_login(0, username, success=False)
             return jsonify({'error': 'Invalid username or password'}), 401
         
         if not user.is_active:
+            log_login(user.id, username, success=False)
             return jsonify({'error': 'User account is inactive'}), 403
+        
+        # Log successful login
+        log_login(user.id, username, success=True)
         
         # Generate JWT token
         payload = {
@@ -91,6 +126,7 @@ def login():
             'user': user_info
         }), 200
     except Exception as e:
+        current_app.logger.error(f"Login error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/verify', methods=['POST'])
@@ -150,6 +186,8 @@ def change_password():
         user.set_password(data['new_password'])
         db.session.commit()
         
+        log_password_change(user.id)
+        
         return jsonify({'message': 'Password changed successfully'}), 200
     except jwt.ExpiredSignatureError:
         return jsonify({'error': 'Token expired'}), 401
@@ -158,6 +196,98 @@ def change_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Request password reset email"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('email'):
+            return jsonify({'error': 'Email is required'}), 400
+        
+        email = data['email'].strip().lower()
+        
+        # Validate email
+        is_valid, error_msg = validate_email(email)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # For security, don't reveal if email exists
+            return jsonify({'message': 'If email exists, reset link has been sent'}), 200
+        
+        # Generate reset token (valid for 1 hour)
+        reset_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+        
+        # Store token hash and expiry in user (we'll add these fields to User model)
+        user.password_reset_token = token_hash
+        user.password_reset_expiry = datetime.utcnow() + timedelta(hours=1)
+        
+        db.session.commit()
+        
+        # Send reset email
+        reset_link = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+        email_sent = send_password_reset_email(user.email, user.username, reset_token, reset_link)
+        
+        if email_sent:
+            return jsonify({'message': 'Password reset link sent to email'}), 200
+        else:
+            return jsonify({'message': 'Password reset requested (email service unavailable)'}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Password reset error: {str(e)}")
+        return jsonify({'error': 'An error occurred. Please try again later.'}), 500
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using reset token"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('token') or not data.get('new_password'):
+            return jsonify({'error': 'Token and new password are required'}), 400
+        
+        reset_token = data['token'].strip()
+        new_password = data['new_password']
+        
+        # Validate password strength
+        is_valid, error_msg = validate_password(new_password)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
+        # Hash the provided token to compare
+        token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+        
+        # Find user with matching token
+        user = User.query.filter_by(password_reset_token=token_hash).first()
+        
+        if not user:
+            return jsonify({'error': 'Invalid reset token'}), 400
+        
+        # Check if token is expired
+        if user.password_reset_expiry < datetime.utcnow():
+            return jsonify({'error': 'Reset token has expired'}), 400
+        
+        # Reset password
+        user.set_password(new_password)
+        user.password_reset_token = None
+        user.password_reset_expiry = None
+        
+        db.session.commit()
+        
+        log_password_change(user.id)
+        
+        return jsonify({'message': 'Password reset successfully'}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Password reset error: {str(e)}")
+        return jsonify({'error': 'An error occurred during password reset'}), 500
 
 @auth_bp.route('/users', methods=['GET'])
 def get_users():

@@ -23,7 +23,7 @@ def create_app(config_name=None):
     CORS(app)
     
     # Register blueprints
-    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp
+    from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp
     
     app.register_blueprint(auth_bp.auth_bp)
     app.register_blueprint(school_bp.school_bp)
@@ -34,6 +34,8 @@ def create_app(config_name=None):
     app.register_blueprint(class_bp.class_bp)
     app.register_blueprint(academic_bp.academic_bp)
     app.register_blueprint(parent_bp.parent_bp)
+    app.register_blueprint(analytics_bp.analytics_bp)
+    app.register_blueprint(export_bp.export_bp)
     
     # Error handlers
     @app.errorhandler(404)
