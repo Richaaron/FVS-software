@@ -154,8 +154,9 @@ def get_result(result_id):
         return jsonify({'error': str(e)}), 500
 
 @result_bp.route('/<int:result_id>', methods=['PUT'])
+@require_role('admin', 'teacher')
 def update_result(result_id):
-    """Update result"""
+    """Update result with CA1, CA2, and Exam scores (admin and teacher only)"""
     try:
         result = Result.query.get(result_id)
         if not result:
@@ -163,17 +164,27 @@ def update_result(result_id):
         
         data = request.get_json()
         
-        if 'continuous_assessment' in data:
-            result.continuous_assessment = data['continuous_assessment']
-        if 'assignment' in data:
-            result.assignment = data['assignment']
-        if 'exam_score' in data:
-            result.exam_score = data['exam_score']
+        # Update assessment scores with new field names
+        if 'ca1' in data:
+            result.ca1 = float(data['ca1'])
+            if result.ca1 < 0 or result.ca1 > 10:
+                return jsonify({'error': 'CA1 must be between 0 and 10'}), 400
+        if 'ca2' in data:
+            result.ca2 = float(data['ca2'])
+            if result.ca2 < 0 or result.ca2 > 10:
+                return jsonify({'error': 'CA2 must be between 0 and 10'}), 400
+        if 'exam' in data:
+            result.exam = float(data['exam'])
+            if result.exam < 0 or result.exam > 80:
+                return jsonify({'error': 'Exam must be between 0 and 80'}), 400
         
+        # Auto-calculate total, grade, and remarks
         result.calculate_score()
         
         db.session.commit()
         return jsonify(result.to_dict()), 200
+    except ValueError:
+        return jsonify({'error': 'Invalid score values. Scores must be numeric'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
