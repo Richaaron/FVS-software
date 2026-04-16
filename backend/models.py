@@ -305,25 +305,25 @@ class Result(db.Model):
     term_id = db.Column(db.Integer, db.ForeignKey('terms.id'), nullable=False)
     
     # Assessment scores
-    continuous_assessment = db.Column(db.Float, default=0)  # e.g., 0-20
-    assignment = db.Column(db.Float, default=0)
-    exam_score = db.Column(db.Float, default=0)  # e.g., 0-80
+    ca1 = db.Column(db.Float, default=0)  # 1st Continuous Assessment (0-10)
+    ca2 = db.Column(db.Float, default=0)  # 2nd Continuous Assessment (0-10)
+    exam = db.Column(db.Float, default=0)  # Exam score (0-80)
     
-    total_score = db.Column(db.Float, default=0)  # Calculated
+    total_score = db.Column(db.Float, default=0)  # Calculated: ca1 + ca2 + exam
     grade = db.Column(db.String(2))  # A, B, C, D, E, F
-    remarks = db.Column(db.String(100))  # Pass, Fail, etc.
+    remarks = db.Column(db.String(100))  # Excellent, Very Good, Good, Fair, Pass, Fail
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def calculate_score(self):
-        """Calculate total score based on components"""
-        self.total_score = self.continuous_assessment + self.assignment + self.exam_score
+        """Calculate total score: CA1 + CA2 + Exam"""
+        self.total_score = self.ca1 + self.ca2 + self.exam
         self.assign_grade()
         return self.total_score
     
     def assign_grade(self):
-        """Assign grade based on total score"""
+        """Assign grade and remarks based on total score (0-100 scale)"""
         score = self.total_score
         if score >= 90:
             self.grade = 'A'
@@ -352,9 +352,9 @@ class Result(db.Model):
             'subject_id': self.subject_id,
             'subject_name': self.subject.name,
             'term_id': self.term_id,
-            'continuous_assessment': self.continuous_assessment,
-            'assignment': self.assignment,
-            'exam_score': self.exam_score,
+            'ca1': self.ca1,
+            'ca2': self.ca2,
+            'exam': self.exam,
             'total_score': self.total_score,
             'grade': self.grade,
             'remarks': self.remarks

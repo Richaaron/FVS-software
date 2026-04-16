@@ -1266,26 +1266,43 @@
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Continuous Assessment (0-20) *</label>
-                                <input type="number" id="continuous_assessment" min="0" max="20" required>
+                                <label>1st CA (0-10) *</label>
+                                <input type="number" id="ca1" min="0" max="10" step="0.5" placeholder="0-10" required oninput="computeTotal()">
+                                <small style="color: #666;">First Continuous Assessment</small>
                             </div>
                             <div class="form-group">
-                                <label>Assignment (0-10) *</label>
-                                <input type="number" id="assignment" min="0" max="10" required>
+                                <label>2nd CA (0-10) *</label>
+                                <input type="number" id="ca2" min="0" max="10" step="0.5" placeholder="0-10" required oninput="computeTotal()">
+                                <small style="color: #666;">Second Continuous Assessment</small>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Exam Score (0-70) *</label>
-                                <input type="number" id="exam_score" min="0" max="70" required>
+                                <label>Exam (0-80) *</label>
+                                <input type="number" id="exam" min="0" max="80" step="0.5" placeholder="0-80" required oninput="computeTotal()">
+                                <small style="color: #666;">Examination Score</small>
                             </div>
                         </div>
 
                         <div class="form-row full">
-                            <div class="form-group">
-                                <div id="totalScoreDisplay" style="padding: 12px; background: #f5f5f5; border-radius: 5px; font-weight: bold;">
-                                    Total Score: <span id="computedTotal">0</span>/100
+                            <div class="form-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 10px;">
+                                <div style="padding: 15px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 8px; text-align: center; border-left: 4px solid #00d4ff;">
+                                    <div style="font-size: 12px; color: #0c4a6e; margin-bottom: 5px;">Total Score</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #0099ff;" id="computedTotal">0</div>
+                                    <div style="font-size: 11px; color: #0c4a6e;">/100</div>
+                                </div>
+                                <div style="padding: 15px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; text-align: center; border-left: 4px solid #fbbf24;">
+                                    <div style="font-size: 12px; color: #92400e; margin-bottom: 5px;">Grade</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #f59e0b;" id="computedGrade">-</div>
+                                </div>
+                                <div style="padding: 15px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 8px; text-align: center; border-left: 4px solid #3b82f6;">
+                                    <div style="font-size: 12px; color: #1e40af; margin-bottom: 5px;">Remarks</div>
+                                    <div style="font-size: 14px; font-weight: bold; color: #1e40af;" id="computedRemarks">-</div>
+                                </div>
+                                <div style="padding: 15px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 8px; text-align: center; border-left: 4px solid #10b981;">
+                                    <div style="font-size: 12px; color: #065f46; margin-bottom: 5px;">Status</div>
+                                    <div style="font-size: 14px; font-weight: bold; color: #10b981;" id="computedStatus">-</div>
                                 </div>
                             </div>
                         </div>
@@ -2043,16 +2060,16 @@
             populateSelect('resultTerm', terms, 'id', 'term_number', true);
 
             if (results && results.length > 0) {
-                let html = '<table><thead><tr><th>Student</th><th>Subject</th><th>CA</th><th>Assignment</th><th>Exam</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead><tbody>';
+                let html = '<table><thead><tr><th>Student</th><th>Subject</th><th>1st CA</th><th>2nd CA</th><th>Exam</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead><tbody>';
                 
                 results.forEach(result => {
                     html += `<tr>
                         <td>${result.student_name}</td>
                         <td>${result.subject_name}</td>
-                        <td>${result.continuous_assessment}</td>
-                        <td>${result.assignment}</td>
-                        <td>${result.exam_score}</td>
-                        <td><strong>${result.total_score}</strong></td>
+                        <td>${result.ca1}</td>
+                        <td>${result.ca2}</td>
+                        <td>${result.exam}</td>
+                        <td><strong>${result.total_score.toFixed(1)}</strong></td>
                         <td><span class="grade-badge grade-${result.grade.toLowerCase()}">${result.grade}</span></td>
                         <td>${result.remarks}</td>
                     </tr>`;
@@ -2068,13 +2085,17 @@
         async function addResult(e) {
             e.preventDefault();
 
+            const ca1 = parseFloat(document.getElementById('ca1').value) || 0;
+            const ca2 = parseFloat(document.getElementById('ca2').value) || 0;
+            const exam = parseFloat(document.getElementById('exam').value) || 0;
+
             const result = {
                 student_id: parseInt(document.getElementById('result_student').value),
                 subject_id: parseInt(document.getElementById('result_subject').value),
                 term_id: parseInt(document.getElementById('result_term').value),
-                continuous_assessment: parseFloat(document.getElementById('continuous_assessment').value),
-                assignment: parseFloat(document.getElementById('assignment').value),
-                exam_score: parseFloat(document.getElementById('exam_score').value)
+                ca1: ca1,
+                ca2: ca2,
+                exam: exam
             };
 
             const response = await fetchAPI('/results', {
@@ -2083,10 +2104,60 @@
             });
 
             if (response) {
-                showAlert('Result saved successfully!', 'success');
+                showAlert(`Result saved successfully!\n\nTotal: ${response.total_score}/100\nGrade: ${response.grade}\nRemarks: ${response.remarks}`, 'success');
                 e.target.reset();
+                document.getElementById('computedTotal').textContent = '0';
+                document.getElementById('computedGrade').textContent = '-';
+                document.getElementById('computedRemarks').textContent = '-';
+                document.getElementById('computedStatus').textContent = '-';
                 loadResults();
             }
+        }
+
+        function computeTotal() {
+            const ca1 = parseFloat(document.getElementById('ca1').value) || 0;
+            const ca2 = parseFloat(document.getElementById('ca2').value) || 0;
+            const exam = parseFloat(document.getElementById('exam').value) || 0;
+
+            const total = ca1 + ca2 + exam;
+            
+            // Display total
+            document.getElementById('computedTotal').textContent = total.toFixed(1);
+
+            // Compute grade and remarks automatically
+            let grade = '-';
+            let remarks = '-';
+            let status = '-';
+
+            if (total >= 90) {
+                grade = 'A';
+                remarks = 'Excellent';
+                status = '✓ Pass';
+            } else if (total >= 80) {
+                grade = 'B';
+                remarks = 'Very Good';
+                status = '✓ Pass';
+            } else if (total >= 70) {
+                grade = 'C';
+                remarks = 'Good';
+                status = '✓ Pass';
+            } else if (total >= 60) {
+                grade = 'D';
+                remarks = 'Fair';
+                status = '✓ Pass';
+            } else if (total >= 50) {
+                grade = 'E';
+                remarks = 'Pass';
+                status = '✓ Pass';
+            } else {
+                grade = 'F';
+                remarks = 'Fail';
+                status = '✗ Fail';
+            }
+
+            document.getElementById('computedGrade').textContent = grade;
+            document.getElementById('computedRemarks').textContent = remarks;
+            document.getElementById('computedStatus').textContent = status;
         }
 
         async function loadStudentSubjects() {

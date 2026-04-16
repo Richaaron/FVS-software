@@ -27,7 +27,7 @@ def get_user_from_token():
 @result_bp.route('', methods=['POST'])
 @require_role('admin', 'teacher')
 def create_result():
-    """Create or update a result (admin and teacher only)"""
+    """Create or update a result with CA1, CA2, and Exam scores (admin and teacher only)"""
     try:
         data = request.get_json()
         
@@ -49,16 +49,28 @@ def create_result():
                 term_id=data['term_id']
             )
         
-        result.continuous_assessment = data.get('continuous_assessment', 0)
-        result.assignment = data.get('assignment', 0)
-        result.exam_score = data.get('exam_score', 0)
+        # Set assessment scores (1st CA, 2nd CA, Exam)
+        result.ca1 = float(data.get('ca1', 0))  # 1st Continuous Assessment (0-10)
+        result.ca2 = float(data.get('ca2', 0))  # 2nd Continuous Assessment (0-10)
+        result.exam = float(data.get('exam', 0))  # Exam score (0-80)
         
+        # Validate score ranges
+        if result.ca1 < 0 or result.ca1 > 10:
+            return jsonify({'error': 'CA1 must be between 0 and 10'}), 400
+        if result.ca2 < 0 or result.ca2 > 10:
+            return jsonify({'error': 'CA2 must be between 0 and 10'}), 400
+        if result.exam < 0 or result.exam > 80:
+            return jsonify({'error': 'Exam must be between 0 and 80'}), 400
+        
+        # Auto-calculate total, grade, and remarks
         result.calculate_score()
         
         db.session.add(result)
         db.session.commit()
         
         return jsonify(result.to_dict()), 201
+    except ValueError:
+        return jsonify({'error': 'Invalid score values. Scores must be numeric'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
