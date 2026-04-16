@@ -507,6 +507,53 @@
             padding: 12px 24px;
         }
 
+        .search-bar .search-input-wrapper {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-bar .search-input {
+            width: 100%;
+            padding: 12px 36px 12px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .search-bar .search-input:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+        }
+
+        .search-bar .search-clear-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            display: none;
+            width: auto;
+        }
+
+        .search-bar .search-clear-btn.visible {
+            display: block;
+        }
+
+        .search-bar .search-clear-btn:hover {
+            background: #e0e0e0;
+            color: #ff6b6b;
+        }
+
         /* Stats */
         .stats {
             display: grid;
@@ -577,6 +624,93 @@
 
         .modal-close:hover {
             color: #333;
+        }
+
+        /* Advanced Analytics Styles */
+        .btn-info {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        .comparison-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .comparison-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .comparison-card {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .comparison-card.improvement {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-left-color: #22c55e;
+        }
+
+        .comparison-card h4 {
+            margin: 0 0 15px 0;
+            color: #0c4a6e;
+            font-size: 1rem;
+        }
+
+        .comparison-card.improvement h4 {
+            color: #166534;
+        }
+
+        .comparison-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comp-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+        }
+
+        .comp-stat span {
+            font-weight: 600;
+            color: #0c4a6e;
+            font-size: 0.9rem;
+        }
+
+        .comp-stat strong {
+            font-size: 1.2rem;
+            color: #4ecdc4;
+        }
+
+        .comp-stat strong.positive {
+            color: #22c55e;
+        }
+
+        .comp-stat strong.negative {
+            color: #ef4444;
         }
 
         /* Responsive */
@@ -948,6 +1082,11 @@
                 <li><button class="nav-btn" data-section="results">Results</button></li>
                 <li><button class="nav-btn" data-section="reports">Reports</button></li>
                 <li><button class="nav-btn" data-section="settings">Settings</button></li>
+                <li style="margin-left: auto;"><button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeLabel">Dark</span>
+                </button></li>
+                <li><button class="btn btn-secondary" onclick="logout()">Logout</button></li>
             </ul>
         </nav>
 
@@ -997,13 +1136,16 @@
                 <!-- Students List -->
                 <div id="studentsList" class="tab-content active">
                     <div class="search-bar">
-                        <input type="text" id="studentSearch" placeholder="Search by name or admission number...">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="studentSearch" placeholder="Search by name, admission number, or parent..." class="search-input">
+                            <button type="button" class="search-clear-btn">×</button>
+                        </div>
                         <select id="classFilter" onchange="filterStudents()">
                             <option value="">All Classes</option>
                         </select>
-                        <button class="btn btn-secondary" onclick="loadStudents()">Search</button>
                     </div>
                     <div id="studentsTable"></div>
+                    <div id="studentsPagination"></div>
                 </div>
 
                 <!-- Add Student Form -->
@@ -1087,10 +1229,13 @@
 
                 <div id="teachersList" class="tab-content active">
                     <div class="search-bar">
-                        <input type="text" id="teacherSearch" placeholder="Search teachers...">
-                        <button class="btn btn-secondary" onclick="loadTeachers()">Search</button>
+                        <div class="search-input-wrapper">
+                            <input type="text" id="teacherSearch" placeholder="Search by name, email, or specialization..." class="search-input">
+                            <button type="button" class="search-clear-btn">×</button>
+                        </div>
                     </div>
                     <div id="teachersTable"></div>
+                    <div id="teachersPagination"></div>
                 </div>
 
                 <div id="teacherForm" class="tab-content">
@@ -1167,10 +1312,13 @@
 
                 <div id="subjectsList" class="tab-content active">
                     <div class="search-bar">
-                        <input type="text" id="subjectSearch" placeholder="Search subjects...">
-                        <button class="btn btn-secondary" onclick="loadSubjects()">Search</button>
+                        <div class="search-input-wrapper">
+                            <input type="text" id="subjectSearch" placeholder="Search by name, code, or description..." class="search-input">
+                            <button type="button" class="search-clear-btn">×</button>
+                        </div>
                     </div>
                     <div id="subjectsTable"></div>
+                    <div id="subjectsPagination"></div>
                 </div>
 
                 <div id="subjectForm" class="tab-content">
@@ -1231,16 +1379,20 @@
                 <!-- Results List -->
                 <div id="resultsList" class="tab-content active">
                     <div class="search-bar">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="resultSearch" placeholder="Search by student or subject name..." class="search-input">
+                            <button type="button" class="search-clear-btn">×</button>
+                        </div>
                         <select id="resultClass" onchange="loadResults()">
                             <option value="">All Classes</option>
                         </select>
                         <select id="resultTerm" onchange="loadResults()">
                             <option value="">All Terms</option>
                         </select>
-                        <button class="btn btn-secondary" onclick="loadResults()">Filter</button>
                         <button class="btn btn-primary" onclick="printResults()">Print</button>
                     </div>
                     <div id="resultsTable"></div>
+                    <div id="resultsPagination"></div>
                 </div>
 
                 <!-- Enter Results Form -->
@@ -1335,7 +1487,61 @@
                 <div class="tabs">
                     <button class="tab active" onclick="switchTab(this, 'classRanking')">Class Ranking</button>
                     <button class="tab" onclick="switchTab(this, 'gradeStats')">Grade Distribution</button>
+                    <button class="tab" onclick="switchTab(this, 'advancedAnalytics')">Advanced Analytics</button>
+                    <button class="tab" onclick="switchTab(this, 'comparativeAnalysis')">Comparative Analysis</button>
                     <button class="tab" onclick="switchTab(this, 'studentReport')">Student Report Card</button>
+                    <button class="tab" onclick="switchTab(this, 'exportReports')">📄 Export PDF</button>
+                </div>
+
+                <!-- PDF Export -->
+                <div id="exportReports" class="tab-content">
+                    <div style="background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%); padding: 20px; border-radius: 10px;">
+                        <h3 style="color: #0d47a1; margin-bottom: 15px;">📥 Generate & Export PDF Reports</h3>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #1a3a52; margin-bottom: 10px;">Student Transcript</h4>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Export a complete academic transcript for a student</p>
+                            <div class="search-bar">
+                                <select id="transcriptStudent">
+                                    <option value="">Select Student</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="exportStudentTranscript()">📄 Export Transcript (PDF)</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+                            <h4 style="color: #1a3a52; margin-bottom: 10px;">Class Performance Report</h4>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Export summary and statistics for an entire class</p>
+                            <div class="search-bar">
+                                <select id="reportClass">
+                                    <option value="">Select Class</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="exportClassReport()">📄 Export Class Report (PDF)</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+                            <h4 style="color: #1a3a52; margin-bottom: 10px;">Subject Performance Report</h4>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Export analysis and metrics for a subject</p>
+                            <div class="search-bar">
+                                <select id="reportSubject">
+                                    <option value="">Select Subject</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="exportSubjectReport()">📄 Export Subject Report (PDF)</button>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid #ddd; padding-top: 15px;">
+                            <h4 style="color: #1a3a52; margin-bottom: 10px;">Teacher Credentials Card</h4>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Print teacher login credentials card (Admin only)</p>
+                            <div class="search-bar">
+                                <select id="credentialsTeacher">
+                                    <option value="">Select Teacher</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="exportTeacherCredentials()">📄 Export Credentials (PDF)</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Class Ranking -->
@@ -1362,8 +1568,108 @@
                             <option value="">All Terms</option>
                         </select>
                         <button class="btn btn-secondary" onclick="loadGradeStats()">Load</button>
+                        <button class="btn btn-info" onclick="exportGradeStats()">📥 Export CSV</button>
+                    </div>
+                    <div id="statsCardsContainer"></div>
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <h3 class="chart-title">Grade Distribution</h3>
+                            <canvas id="gradeDistributionChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Subject Performance</h3>
+                            <canvas id="subjectPerformanceChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Class Performance</h3>
+                            <canvas id="classPerformanceChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Top 10 Students</h3>
+                            <canvas id="studentTrendChart"></canvas>
+                        </div>
                     </div>
                     <div id="gradeStatsDisplay"></div>
+                </div>
+
+                <!-- Advanced Analytics -->
+                <div id="advancedAnalytics" class="tab-content">
+                    <div class="advanced-filters">
+                        <h4>🔍 Advanced Filters & Analysis</h4>
+                        <div class="filter-group">
+                            <div>
+                                <label>Filter by Class</label>
+                                <select id="advClass" onchange="loadAdvancedAnalytics()">
+                                    <option value="">All Classes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Filter by Term</label>
+                                <select id="advTerm" onchange="loadAdvancedAnalytics()">
+                                    <option value="">All Terms</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Filter by Subject</label>
+                                <select id="advSubject" onchange="loadAdvancedAnalytics()">
+                                    <option value="">All Subjects</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-primary" onclick="loadAdvancedAnalytics()">Load Analysis</button>
+                            <button class="btn btn-secondary" onclick="advExportAnalytics()">📊 Export Report</button>
+                            <button class="btn btn-info" onclick="advPrintAnalytics()">🖨️ Print Report</button>
+                        </div>
+                    </div>
+
+                    <div id="advancedStatsDisplay"></div>
+
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <h3 class="chart-title">Performance by Gender</h3>
+                            <canvas id="genderPerformanceChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Subject Difficulty Analysis</h3>
+                            <canvas id="subjectDifficultyChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Performance Trend</h3>
+                            <canvas id="performanceTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparative Analysis -->
+                <div id="comparativeAnalysis" class="tab-content">
+                    <div class="advanced-filters">
+                        <h4>📈 Compare Performance Across Periods</h4>
+                        <div class="filter-group">
+                            <div>
+                                <label>First Term</label>
+                                <select id="compareTerm1" onchange="loadComparativeAnalysis()">
+                                    <option value="">Select Term</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Second Term</label>
+                                <select id="compareTerm2" onchange="loadComparativeAnalysis()">
+                                    <option value="">Select Term</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Class (Optional)</label>
+                                <select id="compareClass">
+                                    <option value="">All Classes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-primary" onclick="loadComparativeAnalysis()">Compare</button>
+                        </div>
+                    </div>
+                    <div id="comparativeDisplay"></div>
                 </div>
 
                 <!-- Student Report Card -->
@@ -1525,6 +1831,18 @@
         }
     </style>
 
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script src="js/toast.js"></script>
+    <script src="js/loading.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/pagination.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/advanced-analytics.js"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/ui-animations.js"></script>
     <script>
         // =============== API Configuration ===============
         const API_BASE_URL = 'http://localhost:5000/api';
@@ -1532,6 +1850,13 @@
         let resultsCache = {};
         let authToken = null;
         let currentUser = null;
+
+        // =============== Data Storage for Search ===============
+        let allStudents = [];
+        let allTeachers = [];
+        let allSubjects = [];
+        let allResults = [];
+        let allClasses = [];
 
         // =============== Authentication ===============
         function checkAuth() {
@@ -1567,6 +1892,24 @@
             }
         }
 
+        function toggleDarkMode() {
+            darkModeManager.toggle();
+            updateThemeButtonUI();
+        }
+
+        function updateThemeButtonUI() {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            
+            if (darkModeManager.isDark()) {
+                icon.textContent = '☀️';
+                label.textContent = 'Light';
+            } else {
+                icon.textContent = '🌙';
+                label.textContent = 'Dark';
+            }
+        }
+
         // =============== Utility Functions ===============
         function showAlert(message, type = 'success') {
             const alert = document.getElementById('alert');
@@ -1576,17 +1919,36 @@
         }
 
         function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-            
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
+            try {
+                console.log('Showing section:', sectionId);
+                
+                const section = document.getElementById(sectionId);
+                if (!section) {
+                    console.error(`Section with ID '${sectionId}' not found`);
+                    return;
+                }
+                
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                section.classList.add('active');
+                console.log('Section is now active:', sectionId);
+                
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                const navBtn = document.querySelector(`[data-section="${sectionId}"]`);
+                if (navBtn) {
+                    navBtn.classList.add('active');
+                    console.log('Nav button activated:', sectionId);
+                }
 
-            // Load data based on section
-            if (sectionId === 'dashboard') loadDashboard();
-            else if (sectionId === 'students') loadStudents();
-            else if (sectionId === 'teachers') loadTeachers();
-            else if (sectionId === 'subjects') loadSubjects();
+                // Load data based on section
+                if (sectionId === 'dashboard') loadDashboard();
+                else if (sectionId === 'students') loadStudents();
+                else if (sectionId === 'teachers') loadTeachers();
+                else if (sectionId === 'subjects') loadSubjects();
+            } catch (error) {
+                console.error('Section navigation error:', error);
+                console.error('Stack trace:', error.stack);
+                toast.error('Error loading section: ' + error.message);
+            }
         }
 
         function switchTab(button, tabId) {
@@ -1629,58 +1991,117 @@
                 if (response.status === 401) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
+                    toast.warning('Session expired. Please login again.');
                     window.location.href = 'login.html';
                     return null;
                 }
                 
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error || `API Error: ${response.status}`;
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
                 }
                 
                 return await response.json();
             } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
+                // Only show error toast if not already shown in response handling
+                if (!error.message.includes('API Error')) {
+                    toast.error(`Connection error: ${error.message}`);
+                }
                 return null;
             }
         }
 
         // =============== Dashboard ===============
         async function loadDashboard() {
-            const schools = await fetchAPI('/schools');
-            if (schools && schools.length > 0) {
-                currentSchool = schools[0];
-                
-                const students = await fetchAPI(`/students?school_id=${currentSchool.id}`);
-                const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
-                const subjects = await fetchAPI(`/subjects?school_id=${currentSchool.id}`);
-                const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
-                
-                document.getElementById('totalStudents').textContent = students ? students.length : 0;
-                document.getElementById('totalTeachers').textContent = teachers ? teachers.length : 0;
-                document.getElementById('totalSubjects').textContent = subjects ? subjects.length : 0;
-                document.getElementById('totalClasses').textContent = classes ? classes.length : 0;
+            try {
+                const schools = await fetchAPI('/schools');
+                if (schools && schools.length > 0) {
+                    currentSchool = schools[0];
+                    
+                    const students = await fetchAPI(`/students?school_id=${currentSchool.id}`);
+                    const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
+                    const subjects = await fetchAPI(`/subjects?school_id=${currentSchool.id}`);
+                    const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
+                    
+                    // Animate statistics with count-up effect
+                    const totalStudents = students ? students.length : 0;
+                    const totalTeachers = teachers ? teachers.length : 0;
+                    const totalSubjects = subjects ? subjects.length : 0;
+                    const totalClasses = classes ? classes.length : 0;
+                    
+                    // Animate each stat card
+                    AnimationManager.animateNumber(
+                        document.getElementById('totalStudents'),
+                        totalStudents,
+                        800,
+                        (n) => n.toLocaleString()
+                    );
+                    
+                    AnimationManager.animateNumber(
+                        document.getElementById('totalTeachers'),
+                        totalTeachers,
+                        800,
+                        (n) => n.toLocaleString()
+                    );
+                    
+                    AnimationManager.animateNumber(
+                        document.getElementById('totalSubjects'),
+                        totalSubjects,
+                        800,
+                        (n) => n.toLocaleString()
+                    );
+                    
+                    AnimationManager.animateNumber(
+                        document.getElementById('totalClasses'),
+                        totalClasses,
+                        800,
+                        (n) => n.toLocaleString()
+                    );
+                    
+                    // Add subtle scale animations to stat cards
+                    const statCards = document.querySelectorAll('.stat-card');
+                    statCards.forEach((card, index) => {
+                        setTimeout(() => {
+                            AnimationManager.scaleAnimate(card, 0.9, 1, 500);
+                        }, index * 100);
+                    });
+                }
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+                toast.error('Error loading dashboard: ' + error.message);
             }
         }
 
         // =============== Students Management ===============
         async function loadStudents() {
-            if (!currentSchool) {
-                showAlert('Please configure school first', 'error');
-                return;
-            }
+            try {
+                if (!currentSchool) {
+                    showAlert('Please configure school first', 'error');
+                    return;
+                }
 
             const students = await fetchAPI(`/students?school_id=${currentSchool.id}`);
             const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
             
+            // Store original data for search
+            allStudents = students || [];
+            allClasses = classes || [];
+
             populateSelect('classFilter', classes, 'id', 'name');
             populateSelect('student_class', classes, 'id', 'name');
 
             if (students && students.length > 0) {
+                // Apply pagination
+                paginationManager.setData(students, 10);
+                const paginatedStudents = paginationManager.getCurrentPageData();
+
                 let html = '<table><thead><tr><th>Admission #</th><th>Full Name</th><th>Class</th><th>Gender</th><th>Parent</th><th>Actions</th></tr></thead><tbody>';
                 
-                students.forEach(student => {
+                paginatedStudents.forEach(student => {
                     const studentClass = classes.find(c => c.id === student.class_id);
-                    html += `<tr>
+                    html += `<tr data-student-id="${student.id}">
                         <td>${student.admission_number}</td>
                         <td>${student.full_name}</td>
                         <td>${studentClass ? studentClass.name : 'N/A'}</td>
@@ -1695,13 +2116,51 @@
                 
                 html += '</tbody></table>';
                 document.getElementById('studentsTable').innerHTML = html;
+                
+                // Render pagination controls
+                paginationManager.render('studentsPagination', 'paginationManager.goToPage');
+                
+                // Setup real-time search
+                setupRealTimeSearch('studentSearch', handleStudentSearch, 'students');
+                
+                // Re-render table when pagination changes
+                window.addEventListener('paginationChanged', () => {
+                    const updatedData = paginationManager.getCurrentPageData();
+                    let updatedHtml = '<table><thead><tr><th>Admission #</th><th>Full Name</th><th>Class</th><th>Gender</th><th>Parent</th><th>Actions</th></tr></thead><tbody>';
+                    updatedData.forEach(student => {
+                        const studentClass = classes.find(c => c.id === student.class_id);
+                        updatedHtml += `<tr>
+                            <td>${student.admission_number}</td>
+                            <td>${student.full_name}</td>
+                            <td>${studentClass ? studentClass.name : 'N/A'}</td>
+                            <td>${student.gender || 'N/A'}</td>
+                            <td>${student.parent_name || 'N/A'}</td>
+                            <td><div class="action-buttons">
+                                <button class="btn btn-secondary" onclick="editStudent(${student.id})">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteStudent(${student.id})">Delete</button>
+                            </div></td>
+                        </tr>`;
+                    });
+                    updatedHtml += '</tbody></table>';
+                    document.getElementById('studentsTable').innerHTML = updatedHtml;
+                });
             } else {
                 document.getElementById('studentsTable').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎓</div><p>No students found. Add a student to get started.</p></div>';
+                document.getElementById('studentsPagination').innerHTML = '';
+            }
+            } catch (error) {
+                console.error('Student load error:', error);
+                toast.error('Error loading students: ' + error.message);
+                document.getElementById('studentsTable').innerHTML = '<div class="empty-state"><p>Error loading students</p></div>';
             }
         }
 
         async function addStudent(e) {
             e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            loadingManager.showButton(submitBtn, 'Adding Student...');
+            uiAnimationsManager.animateFormSubmit(e.target);
 
             const formData = new FormData();
             formData.append('school_id', currentSchool.id);
@@ -1728,9 +2187,12 @@
                 headers: {} // Let browser set Content-Type for FormData
             }, false); // false = don't JSON.stringify
 
+            loadingManager.hideButton(submitBtn);
+
             if (result) {
                 const admissionNumber = result.admission_number || 'N/A';
-                showAlert(`Student added successfully!\n\nAdmission Number: ${admissionNumber}`, 'success');
+                uiAnimationsManager.animateSuccess(submitBtn);
+                toast.success(`Student added! Admission #: ${admissionNumber}`);
                 e.target.reset();
                 loadStudents();
             }
@@ -1738,51 +2200,104 @@
 
         async function deleteStudent(studentId) {
             if (confirm('Are you sure you want to delete this student?')) {
+                const rowElement = document.querySelector(`tr[data-student-id="${studentId}"]`);
                 const result = await fetchAPI(`/students/${studentId}`, { method: 'DELETE' });
                 if (result) {
-                    showAlert('Student deleted successfully!', 'success');
-                    loadStudents();
+                    if (rowElement) {
+                        uiAnimationsManager.animateRowDelete(rowElement, () => {
+                            toast.success('Student deleted successfully');
+                            loadStudents();
+                        });
+                    } else {
+                        toast.success('Student deleted successfully');
+                        loadStudents();
+                    }
                 }
             }
         }
 
         // =============== Teachers Management ===============
         async function loadTeachers() {
-            if (!currentSchool) {
-                showAlert('Please configure school first', 'error');
-                return;
-            }
+            try {
+                if (!currentSchool) {
+                    showAlert('Please configure school first', 'error');
+                    return;
+                }
 
-            const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
-            
-            populateSelect('teacher_school', [currentSchool], 'id', 'name');
+                const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
+                
+                // Store original data for search
+                allTeachers = teachers || [];
 
-            if (teachers && teachers.length > 0) {
-                let html = '<table><thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
-                
-                teachers.forEach(teacher => {
-                    html += `<tr>
-                        <td>${teacher.staff_id}</td>
-                        <td>${teacher.full_name}</td>
-                        <td>${teacher.email || 'N/A'}</td>
-                        <td>${teacher.specialization || 'N/A'}</td>
-                        <td>${teacher.is_active ? 'Active' : 'Inactive'}</td>
-                        <td><div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editTeacher(${teacher.id})">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteTeacher(${teacher.id})">Delete</button>
-                        </div></td>
-                    </tr>`;
-                });
-                
-                html += '</tbody></table>';
-                document.getElementById('teachersTable').innerHTML = html;
-            } else {
-                document.getElementById('teachersTable').innerHTML = '<div class="empty-state"><div class="empty-state-icon">👨‍🏫</div><p>No teachers found. Add a teacher to get started.</p></div>';
+                populateSelect('teacher_school', [currentSchool], 'id', 'name');
+
+                if (teachers && teachers.length > 0) {
+                    // Apply pagination
+                    paginationManager.setData(teachers, 10);
+                    const paginatedTeachers = paginationManager.getCurrentPageData();
+
+                    let html = '<table><thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                    
+                    paginatedTeachers.forEach(teacher => {
+                        html += `<tr data-teacher-id="${teacher.id}">
+                            <td>${teacher.staff_id}</td>
+                            <td>${teacher.full_name}</td>
+                            <td>${teacher.email || 'N/A'}</td>
+                            <td>${teacher.specialization || 'N/A'}</td>
+                            <td>${teacher.is_active ? 'Active' : 'Inactive'}</td>
+                            <td><div class="action-buttons">
+                                <button class="btn btn-secondary" onclick="editTeacher(${teacher.id})">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteTeacher(${teacher.id})">Delete</button>
+                            </div></td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('teachersTable').innerHTML = html;
+                    
+                    // Render pagination controls
+                    paginationManager.render('teachersPagination', 'paginationManager.goToPage');
+                    
+                    // Setup real-time search
+                    setupRealTimeSearch('teacherSearch', handleTeacherSearch, 'teachers');
+                    
+                    // Re-render table when pagination changes
+                    window.addEventListener('paginationChanged', () => {
+                        const updatedData = paginationManager.getCurrentPageData();
+                        let updatedHtml = '<table><thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                        updatedData.forEach(teacher => {
+                            updatedHtml += `<tr>
+                                <td>${teacher.staff_id}</td>
+                                <td>${teacher.full_name}</td>
+                                <td>${teacher.email || 'N/A'}</td>
+                                <td>${teacher.specialization || 'N/A'}</td>
+                                <td>${teacher.is_active ? 'Active' : 'Inactive'}</td>
+                                <td><div class="action-buttons">
+                                    <button class="btn btn-secondary" onclick="editTeacher(${teacher.id})">Edit</button>
+                                    <button class="btn btn-danger" onclick="deleteTeacher(${teacher.id})">Delete</button>
+                                </div></td>
+                            </tr>`;
+                        });
+                        updatedHtml += '</tbody></table>';
+                        document.getElementById('teachersTable').innerHTML = updatedHtml;
+                    });
+                } else {
+                    document.getElementById('teachersTable').innerHTML = '<div class="empty-state"><div class="empty-state-icon">👨‍🏫</div><p>No teachers found. Add a teacher to get started.</p></div>';
+                    document.getElementById('teachersPagination').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Teacher load error:', error);
+                toast.error('Error loading teachers: ' + error.message);
+                document.getElementById('teachersTable').innerHTML = '<div class="empty-state"><p>Error loading teachers</p></div>';
             }
         }
 
         async function addTeacher(e) {
             e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            loadingManager.showButton(submitBtn, 'Adding Teacher...');
+            uiAnimationsManager.animateFormSubmit(e.target);
 
             const formData = new FormData();
             formData.append('school_id', currentSchool.id);
@@ -1806,8 +2321,12 @@
                 headers: {} // Let browser set Content-Type for FormData
             }, false); // false = don't JSON.stringify
 
+            loadingManager.hideButton(submitBtn);
+
             if (result) {
                 // Show credentials modal
+                uiAnimationsManager.animateSuccess(submitBtn);
+                toast.success(`Teacher created! Staff ID: ${result.auto_generated_credentials.staff_id}`);
                 showTeacherCredentialsModal(result);
                 e.target.reset();
                 loadTeachers();
@@ -1906,54 +2425,109 @@
 
         async function deleteTeacher(teacherId) {
             if (confirm('Are you sure you want to delete this teacher?')) {
+                const rowElement = document.querySelector(`tr[data-teacher-id="${teacherId}"]`);
                 const result = await fetchAPI(`/teachers/${teacherId}`, { method: 'DELETE' });
                 if (result) {
-                    showAlert('Teacher deleted successfully!', 'success');
-                    loadTeachers();
+                    if (rowElement) {
+                        uiAnimationsManager.animateRowDelete(rowElement, () => {
+                            toast.success('Teacher deleted successfully!');
+                            loadTeachers();
+                        });
+                    } else {
+                        toast.success('Teacher deleted successfully!');
+                        loadTeachers();
+                    }
                 }
             }
         }
 
         // =============== Subjects Management ===============
         async function loadSubjects() {
-            if (!currentSchool) {
-                showAlert('Please configure school first', 'error');
-                return;
-            }
+            try {
+                if (!currentSchool) {
+                    showAlert('Please configure school first', 'error');
+                    return;
+                }
 
-            const subjects = await fetchAPI(`/subjects?school_id=${currentSchool.id}`);
-            const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
-            
-            populateSelect('subject_school', [currentSchool], 'id', 'name');
-            populateSelect('subject_teacher', teachers, 'id', 'full_name', true);
+                const subjects = await fetchAPI(`/subjects?school_id=${currentSchool.id}`);
+                const teachers = await fetchAPI(`/teachers?school_id=${currentSchool.id}`);
+                
+                // Store original data for search
+                allSubjects = subjects || [];
+                allTeachers = teachers || [];
 
-            if (subjects && subjects.length > 0) {
-                let html = '<table><thead><tr><th>Name</th><th>Code</th><th>Teacher</th><th>Credit Hours</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
-                
-                subjects.forEach(subject => {
-                    const teacher = teachers.find(t => t.id === subject.teacher_id);
-                    html += `<tr>
-                        <td>${subject.name}</td>
-                        <td>${subject.code || 'N/A'}</td>
-                        <td>${teacher ? teacher.full_name : 'N/A'}</td>
-                        <td>${subject.credit_hours}</td>
-                        <td>${subject.is_active ? 'Active' : 'Inactive'}</td>
-                        <td><div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editSubject(${subject.id})">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteSubject(${subject.id})">Delete</button>
-                        </div></td>
-                    </tr>`;
-                });
-                
-                html += '</tbody></table>';
-                document.getElementById('subjectsTable').innerHTML = html;
-            } else {
-                document.getElementById('subjectsTable').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📖</div><p>No subjects found. Add a subject to get started.</p></div>';
+                populateSelect('subject_school', [currentSchool], 'id', 'name');
+                populateSelect('subject_teacher', teachers, 'id', 'full_name', true);
+
+                if (subjects && subjects.length > 0) {
+                    // Apply pagination
+                    paginationManager.setData(subjects, 10);
+                    const paginatedSubjects = paginationManager.getCurrentPageData();
+
+                    let html = '<table><thead><tr><th>Name</th><th>Code</th><th>Teacher</th><th>Credit Hours</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                    
+                    paginatedSubjects.forEach(subject => {
+                        const teacher = teachers.find(t => t.id === subject.teacher_id);
+                        html += `<tr data-subject-id="${subject.id}">
+                            <td>${subject.name}</td>
+                            <td>${subject.code || 'N/A'}</td>
+                            <td>${teacher ? teacher.full_name : 'N/A'}</td>
+                            <td>${subject.credit_hours}</td>
+                            <td>${subject.is_active ? 'Active' : 'Inactive'}</td>
+                            <td><div class="action-buttons">
+                                <button class="btn btn-secondary" onclick="editSubject(${subject.id})">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteSubject(${subject.id})">Delete</button>
+                            </div></td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('subjectsTable').innerHTML = html;
+                    
+                    // Render pagination controls
+                    paginationManager.render('subjectsPagination', 'paginationManager.goToPage');
+                    
+                    // Setup real-time search
+                    setupRealTimeSearch('subjectSearch', handleSubjectSearch, 'subjects');
+                    
+                    // Re-render table when pagination changes
+                    window.addEventListener('paginationChanged', () => {
+                        const updatedData = paginationManager.getCurrentPageData();
+                        let updatedHtml = '<table><thead><tr><th>Name</th><th>Code</th><th>Teacher</th><th>Credit Hours</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                        updatedData.forEach(subject => {
+                            const teacher = teachers.find(t => t.id === subject.teacher_id);
+                            updatedHtml += `<tr>
+                                <td>${subject.name}</td>
+                                <td>${subject.code || 'N/A'}</td>
+                                <td>${teacher ? teacher.full_name : 'N/A'}</td>
+                                <td>${subject.credit_hours}</td>
+                                <td>${subject.is_active ? 'Active' : 'Inactive'}</td>
+                                <td><div class="action-buttons">
+                                    <button class="btn btn-secondary" onclick="editSubject(${subject.id})">Edit</button>
+                                    <button class="btn btn-danger" onclick="deleteSubject(${subject.id})">Delete</button>
+                                </div></td>
+                            </tr>`;
+                        });
+                        updatedHtml += '</tbody></table>';
+                        document.getElementById('subjectsTable').innerHTML = updatedHtml;
+                    });
+                } else {
+                    document.getElementById('subjectsTable').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📖</div><p>No subjects found. Add a subject to get started.</p></div>';
+                    document.getElementById('subjectsPagination').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Subject load error:', error);
+                toast.error('Error loading subjects: ' + error.message);
+                document.getElementById('subjectsTable').innerHTML = '<div class="empty-state"><p>Error loading subjects</p></div>';
             }
         }
 
         async function addSubject(e) {
             e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            loadingManager.showButton(submitBtn, 'Adding Subject...');
+            uiAnimationsManager.animateFormSubmit(e.target);
 
             const subject = {
                 school_id: currentSchool.id,
@@ -1970,8 +2544,11 @@
                 body: JSON.stringify(subject)
             });
 
+            loadingManager.hideButton(submitBtn);
+
             if (result) {
-                showAlert('Subject added successfully!', 'success');
+                uiAnimationsManager.animateSuccess(submitBtn);
+                toast.success(`Subject "${subject.name}" added successfully`);
                 e.target.reset();
                 loadSubjects();
             }
@@ -1979,10 +2556,18 @@
 
         async function deleteSubject(subjectId) {
             if (confirm('Are you sure you want to delete this subject?')) {
+                const rowElement = document.querySelector(`tr[data-subject-id="${subjectId}"]`);
                 const result = await fetchAPI(`/subjects/${subjectId}`, { method: 'DELETE' });
                 if (result) {
-                    showAlert('Subject deleted successfully!', 'success');
-                    loadSubjects();
+                    if (rowElement) {
+                        uiAnimationsManager.animateRowDelete(rowElement, () => {
+                            toast.success('Subject deleted successfully');
+                            loadSubjects();
+                        });
+                    } else {
+                        toast.success('Subject deleted successfully');
+                        loadSubjects();
+                    }
                 }
             }
         }
@@ -2056,13 +2641,21 @@
             const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
             const terms = await fetchAPI('/academic/terms');
             
+            // Store original data for search
+            allResults = results || [];
+            allClasses = classes || [];
+
             populateSelect('resultClass', classes, 'id', 'name', true);
             populateSelect('resultTerm', terms, 'id', 'term_number', true);
 
             if (results && results.length > 0) {
+                // Apply pagination
+                paginationManager.setData(results, 10);
+                const paginatedResults = paginationManager.getCurrentPageData();
+
                 let html = '<table><thead><tr><th>Student</th><th>Subject</th><th>1st CA</th><th>2nd CA</th><th>Exam</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead><tbody>';
                 
-                results.forEach(result => {
+                paginatedResults.forEach(result => {
                     html += `<tr>
                         <td>${result.student_name}</td>
                         <td>${result.subject_name}</td>
@@ -2077,17 +2670,65 @@
                 
                 html += '</tbody></table>';
                 document.getElementById('resultsTable').innerHTML = html;
+                
+                // Render pagination controls
+                paginationManager.render('resultsPagination', 'paginationManager.goToPage');
+                
+                // Setup real-time search
+                setupRealTimeSearch('resultSearch', handleResultSearch, 'results');
+                
+                // Re-render table when pagination changes
+                window.addEventListener('paginationChanged', () => {
+                    const updatedData = paginationManager.getCurrentPageData();
+                    let updatedHtml = '<table><thead><tr><th>Student</th><th>Subject</th><th>1st CA</th><th>2nd CA</th><th>Exam</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead><tbody>';
+                    updatedData.forEach(result => {
+                        updatedHtml += `<tr>
+                            <td>${result.student_name}</td>
+                            <td>${result.subject_name}</td>
+                            <td>${result.ca1}</td>
+                            <td>${result.ca2}</td>
+                            <td>${result.exam}</td>
+                            <td><strong>${result.total_score.toFixed(1)}</strong></td>
+                            <td><span class="grade-badge grade-${result.grade.toLowerCase()}">${result.grade}</span></td>
+                            <td>${result.remarks}</td>
+                        </tr>`;
+                    });
+                    updatedHtml += '</tbody></table>';
+                    document.getElementById('resultsTable').innerHTML = updatedHtml;
+                });
             } else {
                 document.getElementById('resultsTable').innerHTML = '<div class="empty-state"><p>No results found.</p></div>';
+                document.getElementById('resultsPagination').innerHTML = '';
             }
         }
 
         async function addResult(e) {
             e.preventDefault();
 
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            loadingManager.showButton(submitBtn, 'Saving Result...');
+            uiAnimationsManager.animateFormSubmit(e.target);
+
             const ca1 = parseFloat(document.getElementById('ca1').value) || 0;
             const ca2 = parseFloat(document.getElementById('ca2').value) || 0;
             const exam = parseFloat(document.getElementById('exam').value) || 0;
+
+            // Validate scores
+            if (ca1 < 0 || ca1 > 10) {
+                toast.error('1st CA must be between 0 and 10');
+                loadingManager.hideButton(submitBtn);
+                return;
+            }
+            if (ca2 < 0 || ca2 > 10) {
+                toast.error('2nd CA must be between 0 and 10');
+                loadingManager.hideButton(submitBtn);
+                return;
+            }
+            if (exam < 0 || exam > 80) {
+                toast.error('Exam score must be between 0 and 80');
+                loadingManager.hideButton(submitBtn);
+                return;
+            }
 
             const result = {
                 student_id: parseInt(document.getElementById('result_student').value),
@@ -2103,8 +2744,11 @@
                 body: JSON.stringify(result)
             });
 
+            loadingManager.hideButton(submitBtn);
+
             if (response) {
-                showAlert(`Result saved successfully!\n\nTotal: ${response.total_score}/100\nGrade: ${response.grade}\nRemarks: ${response.remarks}`, 'success');
+                uiAnimationsManager.animateSuccess(submitBtn);
+                toast.success(`Result saved! Grade: ${response.grade} (${response.remarks})`);
                 e.target.reset();
                 document.getElementById('computedTotal').textContent = '0';
                 document.getElementById('computedGrade').textContent = '-';
@@ -2423,48 +3067,669 @@
             document.getElementById('computedTotal').textContent = total;
         }
 
-        // =============== Initialization ===============
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // =============== Analytics & Reports ===============
+        async function loadGradeStats() {
+            const classId = document.getElementById('statsClass').value;
+            const termId = document.getElementById('statsTerm').value;
+            
+            let endpoint = '/results';
+            if (classId) endpoint += `?class_id=${classId}`;
+            if (termId) endpoint += (endpoint.includes('?') ? '&' : '?') + `term_id=${termId}`;
+
+            loadingManager.showOverlay('Loading analytics...');
+
+            const results = await fetchAPI(endpoint);
+            const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
+            const terms = await fetchAPI('/academic/terms');
+
+            loadingManager.hideOverlay();
+
+            populateSelect('statsClass', classes, 'id', 'name', true);
+            populateSelect('statsTerm', terms, 'id', 'term_number', true);
+
+            if (results && results.length > 0) {
+                // Display statistics cards
+                chartsManager.createStatisticsCards('statsCardsContainer', results);
+
+                // Create all charts
+                setTimeout(() => {
+                    chartsManager.createGradeDistributionChart('gradeDistributionChart', results);
+                    chartsManager.createSubjectPerformanceChart('subjectPerformanceChart', results);
+                    chartsManager.createClassPerformanceChart('classPerformanceChart', results);
+                    chartsManager.createStudentTrendChart('studentTrendChart', results);
+                }, 100);
+
+                toast.success(`Loaded ${results.length} results`);
+            } else {
+                document.getElementById('statsCardsContainer').innerHTML = '<div class="empty-state"><p>No results found for the selected filters.</p></div>';
+                document.getElementById('gradeStatsDisplay').innerHTML = '';
+                toast.info('No data available for the selected filters');
+            }
+        }
+
+        // =============== Advanced Analytics Functions ===============
+        async function loadAdvancedAnalytics() {
+            const classId = document.getElementById('advClass').value;
+            const termId = document.getElementById('advTerm').value;
+            const subjectId = document.getElementById('advSubject').value;
+
+            let endpoint = '/results';
+            const params = [];
+            if (classId) params.push(`class_id=${classId}`);
+            if (termId) params.push(`term_id=${termId}`);
+            if (subjectId) params.push(`subject_id=${subjectId}`);
+            if (params.length > 0) endpoint += '?' + params.join('&');
+
+            loadingManager.showOverlay('Loading advanced analytics...');
+
+            const results = await fetchAPI(endpoint);
+            const classes = await fetchAPI(`/classes?school_id=${currentSchool.id}`);
+            const terms = await fetchAPI('/academic/terms');
+            const subjects = await fetchAPI(`/subjects?school_id=${currentSchool.id}`);
+
+            loadingManager.hideOverlay();
+
+            populateSelect('advClass', classes, 'id', 'name', true);
+            populateSelect('advTerm', terms, 'id', 'term_number', true);
+            populateSelect('advSubject', subjects, 'id', 'name', true);
+            populateSelect('compareClass', classes, 'id', 'name', true);
+
+            if (results && results.length > 0) {
+                // Calculate advanced statistics
+                const stats = advancedAnalyticsManager.calculateAdvancedStats(results);
+
+                // Display statistics report
+                document.getElementById('advancedStatsDisplay').innerHTML = generateStatisticsReport(stats);
+
+                // Create advanced charts
+                setTimeout(() => {
+                    advancedAnalyticsManager.createGenderPerformanceChart('genderPerformanceChart', results);
+                    advancedAnalyticsManager.createSubjectDifficultyChart('subjectDifficultyChart', results);
+                    advancedAnalyticsManager.createPerformanceTrendChart('performanceTrendChart', results);
+                }, 100);
+
+                toast.success(`Loaded advanced analytics for ${results.length} results`);
+            } else {
+                document.getElementById('advancedStatsDisplay').innerHTML = '<div class="empty-state"><p>No data available for the selected filters.</p></div>';
+                toast.info('No data available for the selected filters');
+            }
+        }
+
+        async function loadComparativeAnalysis() {
+            const term1Id = document.getElementById('compareTerm1').value;
+            const term2Id = document.getElementById('compareTerm2').value;
+            const classId = document.getElementById('compareClass').value;
+
+            if (!term1Id || !term2Id) {
+                toast.warning('Please select two terms to compare');
+                return;
+            }
+
+            loadingManager.showOverlay('Loading comparative analysis...');
+
+            let endpoint1 = `/results?term_id=${term1Id}`;
+            let endpoint2 = `/results?term_id=${term2Id}`;
+            
+            if (classId) {
+                endpoint1 += `&class_id=${classId}`;
+                endpoint2 += `&class_id=${classId}`;
+            }
+
+            const results1 = await fetchAPI(endpoint1);
+            const results2 = await fetchAPI(endpoint2);
+
+            loadingManager.hideOverlay();
+
+            if (results1 && results2) {
+                const stats1 = advancedAnalyticsManager.calculateAdvancedStats(results1);
+                const stats2 = advancedAnalyticsManager.calculateAdvancedStats(results2);
+
+                let comparison = `
+                    <div class="comparison-container">
+                        <h3>Comparative Performance Analysis</h3>
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h4>Term 1 - Statistics</h4>
+                                <div class="comparison-stats">
+                                    <div class="comp-stat">
+                                        <span>Average Score</span>
+                                        <strong>${stats1.mean}</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Pass Rate</span>
+                                        <strong>${stats1.passRate}%</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Highest Score</span>
+                                        <strong>${stats1.max}</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Lowest Score</span>
+                                        <strong>${stats1.min}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="comparison-card improvement">
+                                <h4>Improvement Analysis</h4>
+                                <div class="comparison-stats">
+                                    <div class="comp-stat">
+                                        <span>Average Change</span>
+                                        <strong class="${parseFloat(stats2.mean) > parseFloat(stats1.mean) ? 'positive' : 'negative'}">${(parseFloat(stats2.mean) - parseFloat(stats1.mean)).toFixed(2)}</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Pass Rate Change</span>
+                                        <strong class="${parseFloat(stats2.passRate) > parseFloat(stats1.passRate) ? 'positive' : 'negative'}">${(parseFloat(stats2.passRate) - parseFloat(stats1.passRate)).toFixed(1)}%</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Performance Trend</span>
+                                        <strong class="${parseFloat(stats2.mean) > parseFloat(stats1.mean) ? 'positive' : 'negative'}">${parseFloat(stats2.mean) > parseFloat(stats1.mean) ? '📈 Improving' : '📉 Declining'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="comparison-card">
+                                <h4>Term 2 - Statistics</h4>
+                                <div class="comparison-stats">
+                                    <div class="comp-stat">
+                                        <span>Average Score</span>
+                                        <strong>${stats2.mean}</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Pass Rate</span>
+                                        <strong>${stats2.passRate}%</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Highest Score</span>
+                                        <strong>${stats2.max}</strong>
+                                    </div>
+                                    <div class="comp-stat">
+                                        <span>Lowest Score</span>
+                                        <strong>${stats2.min}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('comparativeDisplay').innerHTML = comparison;
+                toast.success('Comparative analysis loaded successfully');
+            } else {
+                document.getElementById('comparativeDisplay').innerHTML = '<div class="empty-state"><p>Could not load data for comparison.</p></div>';
+                toast.error('Failed to load comparison data');
+            }
+        }
+
+        function exportGradeStats() {
+            const classId = document.getElementById('statsClass').value;
+            const termId = document.getElementById('statsTerm').value;
+
+            if (!allResults || allResults.length === 0) {
+                toast.warning('No results to export. Please load data first.');
+                return;
+            }
+
+            exportToCSV(allResults, `grade-stats-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function advExportAnalytics() {
+            const classId = document.getElementById('advClass').value;
+            const termId = document.getElementById('advTerm').value;
+            const subjectId = document.getElementById('advSubject').value;
+
+            if (!allResults || allResults.length === 0) {
+                toast.warning('No results to export. Please load data first.');
+                return;
+            }
+
+            const filename = `advanced-analytics-${classId || 'all'}-${termId || 'all'}-${new Date().toISOString().split('T')[0]}.csv`;
+            exportToCSV(allResults, filename);
+        }
+
+        function advPrintAnalytics() {
+            const statsDisplay = document.getElementById('advancedStatsDisplay');
+            if (!statsDisplay || statsDisplay.innerHTML.trim() === '') {
+                toast.warning('Please load analytics first');
+                return;
+            }
+
+            const printWindow = window.open('', '', 'width=1200,height=800');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Advanced Analytics Report</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .stat-card { display: inline-block; margin: 10px; padding: 15px; background: #f5f5f5; border-radius: 8px; min-width: 150px; }
+                            .stat-value { font-size: 1.5rem; font-weight: bold; color: #4ecdc4; }
+                            .stat-label { font-size: 0.85rem; color: #666; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+                            th { background: #4ecdc4; color: white; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Advanced Analytics Report</h1>
+                        <p>Generated on: ${new Date().toLocaleString()}</p>
+                        ${statsDisplay.innerHTML}
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+
+        // =============== Real-Time Search Functions ===============
+        function handleStudentSearch(query) {
+            const classes = allClasses;
+            let filtered = query 
+                ? searchManager.searchStudents(allStudents, query, classes)
+                : allStudents;
+
+            if (filtered.length > 0) {
+                // Reset pagination for filtered results
+                paginationManager.setData(filtered, 10);
+                const paginatedStudents = paginationManager.getCurrentPageData();
+
+                let html = '<table><thead><tr><th>Admission #</th><th>Full Name</th><th>Class</th><th>Gender</th><th>Parent</th><th>Actions</th></tr></thead><tbody>';
+                
+                paginatedStudents.forEach(student => {
+                    html += `<tr>
+                        <td>${student.admission_number}</td>
+                        <td>${student.full_name}</td>
+                        <td>${student.className}</td>
+                        <td>${student.gender || 'N/A'}</td>
+                        <td>${student.parent_name || 'N/A'}</td>
+                        <td><div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="editStudent(${student.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteStudent(${student.id})">Delete</button>
+                        </div></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('studentsTable').innerHTML = html;
+                
+                // Render pagination
+                paginationManager.render('studentsPagination');
+
+                // Show result count
+                const resultInfo = document.querySelector('.search-results-info');
+                if (resultInfo) {
+                    resultInfo.textContent = searchManager.formatResultCount(allStudents.length, filtered.length);
+                }
+            } else {
+                document.getElementById('studentsTable').innerHTML = '<div class="empty-state"><p>No students found matching your search.</p></div>';
+                document.getElementById('studentsPagination').innerHTML = '';
+            }
+        }
+
+        function handleTeacherSearch(query) {
+            let filtered = query 
+                ? searchManager.searchTeachers(allTeachers, query)
+                : allTeachers;
+
+            if (filtered.length > 0) {
+                // Reset pagination for filtered results
+                paginationManager.setData(filtered, 10);
+                const paginatedTeachers = paginationManager.getCurrentPageData();
+
+                let html = '<table><thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                
+                paginatedTeachers.forEach(teacher => {
+                    html += `<tr>
+                        <td>${teacher.staff_id}</td>
+                        <td>${teacher.full_name}</td>
+                        <td>${teacher.email || 'N/A'}</td>
+                        <td>${teacher.specialization || 'N/A'}</td>
+                        <td>${teacher.is_active ? 'Active' : 'Inactive'}</td>
+                        <td><div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="editTeacher(${teacher.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteTeacher(${teacher.id})">Delete</button>
+                        </div></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('teachersTable').innerHTML = html;
+                
+                // Render pagination
+                paginationManager.render('teachersPagination');
+            } else {
+                document.getElementById('teachersTable').innerHTML = '<div class="empty-state"><p>No teachers found matching your search.</p></div>';
+                document.getElementById('teachersPagination').innerHTML = '';
+            }
+        }
+
+        function handleSubjectSearch(query) {
+            let filtered = query 
+                ? searchManager.searchSubjects(allSubjects, query)
+                : allSubjects;
+
+            if (filtered.length > 0) {
+                // Reset pagination for filtered results
+                paginationManager.setData(filtered, 10);
+                const paginatedSubjects = paginationManager.getCurrentPageData();
+
+                let html = '<table><thead><tr><th>Name</th><th>Code</th><th>Teacher</th><th>Credit Hours</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+                
+                paginatedSubjects.forEach(subject => {
+                    const teacher = allTeachers.find(t => t.id === subject.teacher_id);
+                    html += `<tr>
+                        <td>${subject.name}</td>
+                        <td>${subject.code || 'N/A'}</td>
+                        <td>${teacher ? teacher.full_name : 'N/A'}</td>
+                        <td>${subject.credit_hours}</td>
+                        <td>${subject.is_active ? 'Active' : 'Inactive'}</td>
+                        <td><div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="editSubject(${subject.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteSubject(${subject.id})">Delete</button>
+                        </div></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('subjectsTable').innerHTML = html;
+                
+                // Render pagination
+                paginationManager.render('subjectsPagination');
+            } else {
+                document.getElementById('subjectsTable').innerHTML = '<div class="empty-state"><p>No subjects found matching your search.</p></div>';
+                document.getElementById('subjectsPagination').innerHTML = '';
+            }
+        }
+
+        function handleResultSearch(query) {
+            let filtered = query 
+                ? searchManager.searchResults(allResults, query)
+                : allResults;
+
+            if (filtered.length > 0) {
+                // Reset pagination for filtered results
+                paginationManager.setData(filtered, 10);
+                const paginatedResults = paginationManager.getCurrentPageData();
+
+                let html = '<table><thead><tr><th>Student</th><th>Subject</th><th>1st CA</th><th>2nd CA</th><th>Exam</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead><tbody>';
+                
+                paginatedResults.forEach(result => {
+                    html += `<tr>
+                        <td>${result.student_name}</td>
+                        <td>${result.subject_name}</td>
+                        <td>${result.ca1}</td>
+                        <td>${result.ca2}</td>
+                        <td>${result.exam}</td>
+                        <td><strong>${result.total_score.toFixed(1)}</strong></td>
+                        <td><span class="grade-badge grade-${result.grade.toLowerCase()}">${result.grade}</span></td>
+                        <td>${result.remarks}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('resultsTable').innerHTML = html;
+                
+                // Render pagination
+                paginationManager.render('resultsPagination');
+            } else {
+                document.getElementById('resultsTable').innerHTML = '<div class="empty-state"><p>No results found matching your search.</p></div>';
+                document.getElementById('resultsPagination').innerHTML = '';
+            }
+        }
+
+        // =============== PDF Export Functions ===============
+        
+        async function initializeExportSelects() {
+            try {
+                // Load data for export select dropdowns
+                const students = await fetchAPI(`/students?school_id=${currentSchool?.id || ''}`);
+                const classes = await fetchAPI(`/classes?school_id=${currentSchool?.id || ''}`);
+                const subjects = await fetchAPI(`/subjects?school_id=${currentSchool?.id || ''}`);
+                const teachers = await fetchAPI(`/teachers?school_id=${currentSchool?.id || ''}`);
+
+                if (document.getElementById('transcriptStudent')) {
+                    populateSelect('transcriptStudent', students, 'id', 'full_name', true);
+                }
+                if (document.getElementById('reportClass')) {
+                    populateSelect('reportClass', classes, 'id', 'name', true);
+                }
+                if (document.getElementById('reportSubject')) {
+                    populateSelect('reportSubject', subjects, 'id', 'name', true);
+                }
+                if (document.getElementById('credentialsTeacher')) {
+                    populateSelect('credentialsTeacher', teachers, 'id', 'full_name', true);
+                }
+            } catch (error) {
+                console.error('Export selects initialization error:', error);
+            }
+        }
+
+        async function exportStudentTranscript() {
+            const studentId = document.getElementById('transcriptStudent').value;
+            if (!studentId) {
+                toast.error('Please select a student');
+                return;
+            }
+
+            const btn = event.target;
+            loadingManager.showButton(btn, 'Generating PDF...');
+
+            try {
+                const response = await fetch(`/api/export/pdf/student-transcript/${studentId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `transcript_${Date.now()}.pdf`);
+                    toast.success('Transcript PDF downloaded successfully');
+                    uiAnimationsManager.animateSuccess(btn);
+                } else {
+                    const error = await response.json();
+                    toast.error(error.error || 'Failed to generate transcript');
+                    uiAnimationsManager.animateError(btn);
+                }
+            } catch (error) {
+                toast.error('Error generating PDF: ' + error.message);
+                uiAnimationsManager.animateError(btn);
+            } finally {
+                loadingManager.hideButton(btn);
+            }
+        }
+
+        async function exportClassReport() {
+            const classId = document.getElementById('reportClass').value;
+            if (!classId) {
+                toast.error('Please select a class');
+                return;
+            }
+
+            const btn = event.target;
+            loadingManager.showButton(btn, 'Generating PDF...');
+
+            try {
+                const response = await fetch(`/api/export/pdf/class-report/${classId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `class_report_${Date.now()}.pdf`);
+                    toast.success('Class report PDF downloaded successfully');
+                    uiAnimationsManager.animateSuccess(btn);
+                } else {
+                    const error = await response.json();
+                    toast.error(error.error || 'Failed to generate class report');
+                    uiAnimationsManager.animateError(btn);
+                }
+            } catch (error) {
+                toast.error('Error generating PDF: ' + error.message);
+                uiAnimationsManager.animateError(btn);
+            } finally {
+                loadingManager.hideButton(btn);
+            }
+        }
+
+        async function exportSubjectReport() {
+            const subjectId = document.getElementById('reportSubject').value;
+            if (!subjectId) {
+                toast.error('Please select a subject');
+                return;
+            }
+
+            const btn = event.target;
+            loadingManager.showButton(btn, 'Generating PDF...');
+
+            try {
+                const response = await fetch(`/api/export/pdf/subject-report/${subjectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `subject_report_${Date.now()}.pdf`);
+                    toast.success('Subject report PDF downloaded successfully');
+                    uiAnimationsManager.animateSuccess(btn);
+                } else {
+                    const error = await response.json();
+                    toast.error(error.error || 'Failed to generate subject report');
+                    uiAnimationsManager.animateError(btn);
+                }
+            } catch (error) {
+                toast.error('Error generating PDF: ' + error.message);
+                uiAnimationsManager.animateError(btn);
+            } finally {
+                loadingManager.hideButton(btn);
+            }
+        }
+
+        async function exportTeacherCredentials() {
+            const teacherId = document.getElementById('credentialsTeacher').value;
+            if (!teacherId) {
+                toast.error('Please select a teacher');
+                return;
+            }
+
+            const btn = event.target;
+            loadingManager.showButton(btn, 'Generating PDF...');
+
+            try {
+                const response = await fetch(`/api/export/pdf/teacher-credentials/${teacherId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadBlob(blob, `credentials_${Date.now()}.pdf`);
+                    toast.success('Credentials PDF downloaded successfully');
+                    uiAnimationsManager.animateSuccess(btn);
+                } else {
+                    const error = await response.json();
+                    toast.error(error.error || 'Failed to generate credentials');
+                    uiAnimationsManager.animateError(btn);
+                }
+            } catch (error) {
+                toast.error('Error generating PDF: ' + error.message);
+                uiAnimationsManager.animateError(btn);
+            } finally {
+                loadingManager.hideButton(btn);
+            }
+        }
+
+        // Helper function to download blob as file
+        function downloadBlob(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
 
         // Initialize app
         (async () => {
-            // Check authentication first
-            if (!checkAuth()) {
-                return;
-            }
-            
-            const schools = await fetchAPI('/schools');
-            if (!schools || schools.length === 0) {
-                // Create default school
-                const defaultSchool = {
-                    name: 'Folusho Victory Schools',
-                    address: '',
-                    principal: '',
-                    email: '',
-                    phone: '',
-                    established_year: 2020
-                };
-                const created = await fetchAPI('/schools', {
-                    method: 'POST',
-                    body: JSON.stringify(defaultSchool)
-                });
-                if (created) currentSchool = created;
-            } else {
-                currentSchool = schools[0];
+            try {
+                console.log('App initialization started');
                 
-                // Populate school info in settings
-                document.getElementById('school_name').value = currentSchool.name;
-                document.getElementById('school_principal').value = currentSchool.principal || '';
-                document.getElementById('school_email').value = currentSchool.email || '';
-                document.getElementById('school_phone').value = currentSchool.phone || '';
-                document.getElementById('school_address').value = currentSchool.address || '';
-                document.getElementById('school_year').value = currentSchool.established_year || '';
-            }
+                // Check authentication first
+                if (!checkAuth()) {
+                    console.log('Auth check failed');
+                    return;
+                }
+                
+                console.log('Auth check passed, fetching schools');
+                const schools = await fetchAPI('/schools');
+                console.log('Schools fetched:', schools);
+                
+                if (!schools || schools.length === 0) {
+                    console.log('No schools found, creating default');
+                    // Create default school
+                    const defaultSchool = {
+                        name: 'Folusho Victory Schools',
+                        address: '',
+                        principal: '',
+                        email: '',
+                        phone: '',
+                        established_year: 2020
+                    };
+                    const created = await fetchAPI('/schools', {
+                        method: 'POST',
+                        body: JSON.stringify(defaultSchool)
+                    });
+                    if (created) {
+                        currentSchool = created;
+                        console.log('Default school created:', currentSchool);
+                    }
+                } else {
+                    currentSchool = schools[0];
+                    console.log('Current school set:', currentSchool.name);
+                    
+                    // Populate school info in settings
+                    if (document.getElementById('school_name')) {
+                        document.getElementById('school_name').value = currentSchool.name;
+                        document.getElementById('school_principal').value = currentSchool.principal || '';
+                        document.getElementById('school_email').value = currentSchool.email || '';
+                        document.getElementById('school_phone').value = currentSchool.phone || '';
+                        document.getElementById('school_address').value = currentSchool.address || '';
+                        document.getElementById('school_year').value = currentSchool.established_year || '';
+                    }
+                }
 
-            // Load initial data
-            populateSelect('class_school', [currentSchool], 'id', 'name');
-            populateSelect('session_school', [currentSchool], 'id', 'name');
-            await loadDashboard();
+                // Load initial data
+                if (currentSchool) {
+                    console.log('Loading initial data for school');
+                    if (document.getElementById('class_school')) {
+                        populateSelect('class_school', [currentSchool], 'id', 'name');
+                    }
+                    if (document.getElementById('session_school')) {
+                        populateSelect('session_school', [currentSchool], 'id', 'name');
+                    }
+                }
+                
+                console.log('Loading dashboard');
+                await loadDashboard();
+                
+                console.log('Initializing export selects');
+                await initializeExportSelects();
+                
+                console.log('App initialization completed successfully');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                console.error('Stack trace:', error.stack);
+                toast.error('Failed to load dashboard: ' + error.message);
+            }
         })();
     </script>
 </body>

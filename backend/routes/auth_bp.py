@@ -78,7 +78,7 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Login user and return JWT token"""
+    """Login user and return JWT token (rate limited: 5 attempts per minute)"""
     try:
         data = request.get_json()
         

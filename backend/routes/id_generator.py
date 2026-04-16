@@ -8,6 +8,7 @@ import string
 import random
 from datetime import datetime
 from models import db, Student, Teacher
+from .validation_utils import validate_photo_upload, sanitize_filename
 
 # Configure upload folders
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads')
@@ -102,7 +103,7 @@ def allowed_file(filename: str) -> bool:
 
 def save_student_photo(file, student_id: int) -> tuple:
     """
-    Save student photo
+    Save student photo with validation
     
     Args:
         file: FileStorage object from request
@@ -112,21 +113,18 @@ def save_student_photo(file, student_id: int) -> tuple:
         (success: bool, filename: str, error: str)
     """
     try:
+        # Validate file
+        is_valid, error_msg = validate_photo_upload(file, max_size_mb=5)
+        if not is_valid:
+            return False, None, error_msg
+        
         if not file or file.filename == '':
-            return False, None, 'No file selected'
+            return True, None, None  # Optional field
         
-        if not allowed_file(file.filename):
-            return False, None, 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WebP'
-        
-        if len(file.read()) > MAX_FILE_SIZE:
-            file.seek(0)
-            return False, None, 'File too large. Maximum 5MB'
-        
-        file.seek(0)
-        
-        # Generate unique filename
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"student_{student_id}_{uuid.uuid4().hex[:8]}.{ext}"
+        # Generate unique filename with sanitization
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+        safe_name = sanitize_filename(f"student_{student_id}_{uuid.uuid4().hex[:8]}.{ext}")
+        filename = safe_name
         
         # Save file
         filepath = os.path.join(UPLOAD_FOLDER, 'students', filename)
@@ -135,11 +133,11 @@ def save_student_photo(file, student_id: int) -> tuple:
         return True, filename, None
     
     except Exception as e:
-        return False, None, str(e)
+        return False, None, f"Photo upload error: {str(e)}"
 
 def save_teacher_photo(file, teacher_id: int) -> tuple:
     """
-    Save teacher photo
+    Save teacher photo with validation
     
     Args:
         file: FileStorage object from request
@@ -149,21 +147,18 @@ def save_teacher_photo(file, teacher_id: int) -> tuple:
         (success: bool, filename: str, error: str)
     """
     try:
+        # Validate file
+        is_valid, error_msg = validate_photo_upload(file, max_size_mb=5)
+        if not is_valid:
+            return False, None, error_msg
+        
         if not file or file.filename == '':
-            return False, None, 'No file selected'
+            return True, None, None  # Optional field
         
-        if not allowed_file(file.filename):
-            return False, None, 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WebP'
-        
-        if len(file.read()) > MAX_FILE_SIZE:
-            file.seek(0)
-            return False, None, 'File too large. Maximum 5MB'
-        
-        file.seek(0)
-        
-        # Generate unique filename
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"teacher_{teacher_id}_{uuid.uuid4().hex[:8]}.{ext}"
+        # Generate unique filename with sanitization
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+        safe_name = sanitize_filename(f"teacher_{teacher_id}_{uuid.uuid4().hex[:8]}.{ext}")
+        filename = safe_name
         
         # Save file
         filepath = os.path.join(UPLOAD_FOLDER, 'teachers', filename)
@@ -172,7 +167,7 @@ def save_teacher_photo(file, teacher_id: int) -> tuple:
         return True, filename, None
     
     except Exception as e:
-        return False, None, str(e)
+        return False, None, f"Photo upload error: {str(e)}"
 
 def delete_photo(filename: str, photo_type: str = 'student') -> bool:
     """

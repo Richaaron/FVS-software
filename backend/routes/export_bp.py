@@ -12,7 +12,10 @@ from .export_utils import (
     export_subjects_to_csv,
     get_csv_filename
 )
-from models import db, Student, Teacher, Subject, Result
+from .pdf_generator import PDFGenerator
+from models import db, Student, Teacher, Subject, Result, StudentClass
+from sqlalchemy.orm import joinedload
+from datetime import datetime
 import io
 
 export_bp = Blueprint('export', __name__, url_prefix='/api/export')
@@ -193,4 +196,201 @@ def export_subjects():
     
     except Exception as e:
         current_app.logger.error(f"Export error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============== PDF Export Endpoints ===============
+
+@export_bp.route('/pdf/student-transcript/<int:student_id>', methods=['GET'])
+@require_auth
+def export_student_transcript_pdf(student_id):
+    """Export student transcript as PDF"""
+    try:
+        from pdf_generator import PDFGenerator
+        from sqlalchemy.orm import joinedload
+        
+        # Get student
+        student = Student.query.filter_by(id=student_id).first()
+        if not student:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        # Get results with eager loading
+        results = Result.query.filter_by(student_id=student_id)\
+            .options(joinedload(Result.subject))\
+            .all()
+        
+        # Format results for PDF
+        results_data = []
+        for r in results:
+            results_data.append({
+                'subject_name': r.subject.name if r.subject else 'N/A',
+                'ca1': r.ca1,
+                'ca2': r.ca2,
+                'exam': r.exam,
+                'total_score': r.total_score,
+                'grade': r.grade,
+                'remarks': r.remarks
+            })
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator(school_name="Folusho Victory Schools")
+        pdf_buffer = pdf_gen.generate_student_transcript(student, results_data)
+        
+        # Return PDF
+        from datetime import datetime
+        filename = f"transcript_{student.admission_number}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"PDF export error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@export_bp.route('/pdf/teacher-credentials/<int:teacher_id>', methods=['GET'])
+@require_auth
+@require_role('admin')
+def export_teacher_credentials_pdf(teacher_id):
+    """Export teacher credentials as PDF"""
+    try:
+        from pdf_generator import PDFGenerator
+        
+        # Get teacher
+        teacher = Teacher.query.filter_by(id=teacher_id).first()
+        if not teacher:
+            return jsonify({'error': 'Teacher not found'}), 404
+        
+        # Get credentials from request (admin provides them)
+        username = request.args.get('username', 'contact_admin')
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator(school_name="Folusho Victory Schools")
+        pdf_buffer = pdf_gen.generate_teacher_credentials(
+            teacher, 
+            username, 
+            '[See email for password]',
+            teacher.staff_id
+        )
+        
+        # Return PDF
+        from datetime import datetime
+        filename = f"credentials_{teacher.staff_id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"PDF export error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@export_bp.route('/pdf/class-report/<int:class_id>', methods=['GET'])
+@require_auth
+@require_role('admin', 'teacher')
+def export_class_report_pdf(class_id):
+    """Export class performance report as PDF"""
+    try:
+        from pdf_generator import PDFGenerator
+        from sqlalchemy.orm import joinedload
+        
+        # Get class
+        class_obj = db.session.query(StudentClass).filter_by(id=class_id).first()
+        if not class_obj:
+            return jsonify({'error': 'Class not found'}), 404
+        
+        # Get all students in class
+        students = Student.query.filter_by(class_id=class_id).all()
+        
+        # Get results for each student
+        results_by_student = {}
+        for student in students:
+            student_results = Result.query.filter_by(student_id=student.id)\
+                .options(joinedload(Result.subject))\
+                .all()
+            
+            results_data = []
+            for r in student_results:
+                results_data.append({
+                    'subject_name': r.subject.name if r.subject else 'N/A',
+                    'ca1': r.ca1,
+                    'ca2': r.ca2,
+                    'exam': r.exam,
+                    'total_score': r.total_score,
+                    'grade': r.grade,
+                    'remarks': r.remarks
+                })
+            
+            if results_data:
+                results_by_student[student.full_name] = results_data
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator(school_name="Folusho Victory Schools")
+        pdf_buffer = pdf_gen.generate_class_report(class_obj.name, results_by_student)
+        
+        # Return PDF
+        filename = f"class_report_{class_obj.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"PDF export error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@export_bp.route('/pdf/subject-report/<int:subject_id>', methods=['GET'])
+@require_auth
+@require_role('admin', 'teacher')
+def export_subject_report_pdf(subject_id):
+    """Export subject performance report as PDF"""
+    try:
+        from pdf_generator import PDFGenerator
+        
+        # Get subject
+        subject = Subject.query.filter_by(id=subject_id).first()
+        if not subject:
+            return jsonify({'error': 'Subject not found'}), 404
+        
+        # Get all results for this subject
+        results = Result.query.filter_by(subject_id=subject_id).all()
+        
+        # Format results
+        results_data = []
+        for r in results:
+            results_data.append({
+                'student_name': r.student.full_name if r.student else 'N/A',
+                'ca1': r.ca1,
+                'ca2': r.ca2,
+                'exam': r.exam,
+                'total_score': r.total_score,
+                'grade': r.grade,
+                'remarks': r.remarks
+            })
+        
+        # Generate PDF
+        pdf_gen = PDFGenerator(school_name="Folusho Victory Schools")
+        pdf_buffer = pdf_gen.generate_subject_report(subject.name, results_data)
+        
+        # Return PDF
+        from datetime import datetime
+        filename = f"subject_report_{subject.code or subject.name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"PDF export error: {str(e)}")
         return jsonify({'error': str(e)}), 500

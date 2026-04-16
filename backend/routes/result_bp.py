@@ -4,6 +4,7 @@ Result routes with role-based access control
 from flask import Blueprint, request, jsonify
 from models import db, Result, Student, Subject, Term, Teacher, Parent, User
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from routes.auth_utils import require_auth, require_role, get_token_from_request
 import jwt
 import os
@@ -89,7 +90,11 @@ def get_results():
         term_id = request.args.get('term_id', type=int)
         class_id = request.args.get('class_id', type=int)
         
-        query = Result.query
+        # Use eager loading to prevent N+1 queries
+        query = Result.query.options(
+            joinedload(Result.student),
+            joinedload(Result.subject)
+        )
         
         # Apply role-based filtering
         if user_payload['role'] == 'parent':
@@ -134,7 +139,12 @@ def get_result(result_id):
         if not user_payload:
             return jsonify({'error': 'Unauthorized'}), 401
         
-        result = Result.query.get(result_id)
+        # Use eager loading to prevent N+1 queries
+        result = Result.query.options(
+            joinedload(Result.student),
+            joinedload(Result.subject)
+        ).get(result_id)
+        
         if not result:
             return jsonify({'error': 'Result not found'}), 404
         
@@ -199,7 +209,12 @@ def get_student_summary(student_id):
         if not student:
             return jsonify({'error': 'Student not found'}), 404
         
-        query = Result.query.filter_by(student_id=student_id)
+        # Use eager loading to prevent N+1 queries
+        query = Result.query.options(
+            joinedload(Result.subject),
+            joinedload(Result.student)
+        ).filter_by(student_id=student_id)
+        
         if term_id:
             query = query.filter_by(term_id=term_id)
         

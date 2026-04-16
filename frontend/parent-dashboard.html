@@ -653,6 +653,10 @@
                         <div class="badge">PARENT</div>
                         <strong id="userName">Parent</strong>
                     </div>
+                    <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                        <span id="themeIcon">🌙</span>
+                        <span id="themeLabel">Dark</span>
+                    </button>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -695,6 +699,11 @@
         </div>
     </div>
 
+    <script src="js/toast.js"></script>
+    <script src="js/loading.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/ui-animations.js"></script>
     <script>
         // =============== API Configuration ===============
         const API_BASE_URL = 'http://localhost:5000/api';
@@ -737,6 +746,24 @@
             }
         }
 
+        function toggleDarkMode() {
+            darkModeManager.toggle();
+            updateThemeButtonUI();
+        }
+
+        function updateThemeButtonUI() {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            
+            if (darkModeManager.isDark()) {
+                icon.textContent = '☀️';
+                label.textContent = 'Light';
+            } else {
+                icon.textContent = '🌙';
+                label.textContent = 'Dark';
+            }
+        }
+
         // =============== Utility Functions ===============
         async function fetchAPI(endpoint, options = {}) {
             try {
@@ -757,17 +784,23 @@
                 if (response.status === 401) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
+                    toast.warning('Session expired. Please login again.');
                     window.location.href = 'login.html';
                     return null;
                 }
                 
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error || `API Error: ${response.status}`;
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
                 }
                 
                 return await response.json();
             } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
+                if (!error.message.includes('API Error')) {
+                    toast.error(`Connection error: ${error.message}`);
+                }
                 return null;
             }
         }
@@ -799,7 +832,11 @@
 
         // =============== Children & Results Functions ===============
         async function loadChildren() {
+            loadingManager.showOverlay('Loading your children...');
+
             const children = await fetchAPI(`/parents/${currentUser.user_id}/children`);
+
+            loadingManager.hideOverlay();
             
             if (children && children.length > 0) {
                 parentChildren = children;
@@ -825,9 +862,12 @@
                     selectHtml += `<option value="${child.id}">${child.first_name} ${child.last_name} (${child.admission_number})</option>`;
                 });
                 document.getElementById('childSelect').innerHTML = selectHtml;
+
+                toast.success('Children loaded successfully');
             } else {
                 document.getElementById('childrenContainer').innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;"><p>No children found in your account</p></div>';
                 document.getElementById('childSelect').innerHTML = '<option value="">No children available</option>';
+                toast.info('No children found in your account');
             }
         }
 
@@ -844,17 +884,21 @@
                 return;
             }
             
+            loadingManager.showInElement(document.getElementById('resultsContent'), 'skeleton');
+
             const results = await fetchAPI(`/students/${childId}/results`);
             
+            loadingManager.hideInElement(document.getElementById('resultsContent'));
+
             if (!results || results.length === 0) {
                 document.getElementById('resultsContent').innerHTML = '<div class="empty-state"><p>No results available yet for this student</p></div>';
                 return;
             }
             
-            // Group results by session/term
+            // Group results by term
             const groupedResults = {};
             results.forEach(result => {
-                const key = result.session_name || 'Session';
+                const key = result.term_name || 'Term';
                 if (!groupedResults[key]) {
                     groupedResults[key] = [];
                 }
@@ -863,50 +907,53 @@
             
             let html = '';
             
-            for (const [session, sessionResults] of Object.entries(groupedResults)) {
+            for (const [term, termResults] of Object.entries(groupedResults)) {
                 let totalScore = 0;
                 let totalCount = 0;
                 
-                sessionResults.forEach(r => {
-                    totalScore += (r.continuous_assessment || 0) + (r.assignment || 0) + (r.exam_score || 0);
-                    totalCount += 3;
+                termResults.forEach(r => {
+                    totalScore += r.total_score || 0;
+                    totalCount++;
                 });
                 
                 const averageScore = totalCount > 0 ? (totalScore / totalCount).toFixed(1) : 0;
                 
                 html += `<div style="margin-bottom: 30px;">
-                    <h4 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">${session}</h4>
+                    <h4 style="color: #333; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">${term}</h4>
                     <div class="results-table-container">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Subject</th>
-                                    <th>CA Score</th>
-                                    <th>Assignment</th>
-                                    <th>Exam Score</th>
-                                    <th>Total Score</th>
+                                    <th>CA1 (0-10)</th>
+                                    <th>CA2 (0-10)</th>
+                                    <th>Exam (0-80)</th>
+                                    <th>Total (0-100)</th>
                                     <th>Grade</th>
+                                    <th>Remarks</th>
                                 </tr>
                             </thead>
                             <tbody>`;
                 
-                sessionResults.forEach(result => {
-                    const ca = result.continuous_assessment || 0;
-                    const assign = result.assignment || 0;
-                    const exam = result.exam_score || 0;
-                    const total = ca + assign + exam;
-                    const grade = getGradeLetter(total);
-                    const gradeColor = getGradeColor(total);
+                termResults.forEach(result => {
+                    const ca1 = result.ca1 || 0;
+                    const ca2 = result.ca2 || 0;
+                    const exam = result.exam || 0;
+                    const total = result.total_score || (ca1 + ca2 + exam);
+                    const grade = result.grade || 'N/A';
+                    const remarks = result.remarks || 'Pending';
                     
                     const scoreClass = total >= 70 ? 'score' : (total >= 50 ? 'score medium' : 'score low');
+                    const gradeColor = total >= 90 ? 'grade-a' : (total >= 80 ? 'grade-b' : (total >= 70 ? 'grade-c' : (total >= 60 ? 'grade-d' : (total >= 50 ? 'grade-e' : 'grade-f'))));
                     
                     html += `<tr>
-                        <td><strong>${result.subject_name}</strong></td>
-                        <td>${ca}</td>
-                        <td>${assign}</td>
+                        <td><strong>${result.subject_name || 'Subject'}</strong></td>
+                        <td>${ca1}</td>
+                        <td>${ca2}</td>
                         <td>${exam}</td>
                         <td class="${scoreClass}">${total}</td>
                         <td><span class="grade ${gradeColor}">${grade}</span></td>
+                        <td style="color: #666; font-size: 0.9em;">${remarks}</td>
                     </tr>`;
                 });
                 
@@ -914,10 +961,10 @@
                         </table>
                     </div>
                     <div class="performance-summary">
-                        <h4>Session Summary</h4>
+                        <h4>Term Summary</h4>
                         <div class="summary-item">
                             <span>Total Subjects:</span>
-                            <strong>${sessionResults.length}</strong>
+                            <strong>${termResults.length}</strong>
                         </div>
                         <div class="summary-item">
                             <span>Average Score:</span>
@@ -925,9 +972,9 @@
                         </div>
                         <div class="summary-item">
                             <span>Best Subject:</span>
-                            <strong>${sessionResults.length > 0 ? sessionResults.reduce((a, b) => {
-                                const aTotal = (a.continuous_assessment || 0) + (a.assignment || 0) + (a.exam_score || 0);
-                                const bTotal = (b.continuous_assessment || 0) + (b.assignment || 0) + (b.exam_score || 0);
+                            <strong>${termResults.length > 0 ? termResults.reduce((a, b) => {
+                                const aTotal = a.total_score || 0;
+                                const bTotal = b.total_score || 0;
                                 return aTotal > bTotal ? a : b;
                             }).subject_name : 'N/A'}</strong>
                         </div>
@@ -935,6 +982,7 @@
             }
             
             document.getElementById('resultsContent').innerHTML = html;
+            toast.success('Results loaded successfully');
         }
 
         // =============== Initialization ===============

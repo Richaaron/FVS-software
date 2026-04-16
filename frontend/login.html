@@ -630,6 +630,12 @@
     </style>
 </head>
 <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode" style="position: fixed; top: 20px; right: 20px; z-index: 10000;">
+        <span id="themeIcon">🌙</span>
+        <span id="themeLabel">Dark</span>
+    </button>
+
     <div class="container">
         <!-- Left Section -->
         <div class="left-section">
@@ -706,6 +712,9 @@
         </div>
     </div>
 
+    <script src="js/toast.js"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/ui-animations.js"></script>
     <script>
         const API_BASE_URL = 'http://localhost:5000/api';
         let selectedRole = 'admin';
@@ -719,12 +728,35 @@
             });
         });
 
-        // Show alert
+        // Show alert (deprecated - use toast instead)
         function showAlert(message, type = 'error') {
             const alert = document.getElementById('alert');
             alert.className = `alert active alert-${type}`;
             alert.textContent = message;
         }
+
+        // Theme toggle functions
+        function toggleDarkMode() {
+            darkModeManager.toggle();
+            updateThemeButtonUI();
+        }
+
+        function updateThemeButtonUI() {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            
+            if (darkModeManager.isDark()) {
+                icon.textContent = '☀️';
+                label.textContent = 'Light';
+            } else {
+                icon.textContent = '🌙';
+                label.textContent = 'Dark';
+            }
+        }
+
+        // Initialize theme button UI on page load
+        document.addEventListener('DOMContentLoaded', updateThemeButtonUI);
+        window.addEventListener('themeChange', updateThemeButtonUI);
 
         // Handle login
         async function handleLogin(event) {
@@ -734,7 +766,7 @@
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                showAlert('Please enter username and password', 'error');
+                toast.error('Please enter username and password');
                 return;
             }
 
@@ -760,7 +792,7 @@
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
 
-                    showAlert('Login successful! Redirecting...', 'success');
+                    toast.success('Login successful! Redirecting...');
 
                     // Redirect based on role
                     setTimeout(() => {
@@ -773,10 +805,10 @@
                         }
                     }, 1500);
                 } else {
-                    showAlert(data.error || 'Login failed', 'error');
+                    toast.error(data.error || 'Login failed');
                 }
             } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
+                toast.error(`Connection error: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
             }

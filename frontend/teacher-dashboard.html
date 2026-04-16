@@ -759,6 +759,11 @@
                 <li><button class="nav-btn" data-section="subjects">My Subjects</button></li>
                 <li><button class="nav-btn" data-section="classes">My Classes</button></li>
                 <li><button class="nav-btn" data-section="results">Enter Results</button></li>
+                <li style="margin-left: auto;"><button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeLabel">Dark</span>
+                </button></li>
+                <li><button class="btn btn-secondary" onclick="logout()">Logout</button></li>
             </ul>
         </nav>
 
@@ -862,6 +867,11 @@
         </div>
     </div>
 
+    <script src="js/toast.js"></script>
+    <script src="js/loading.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/ui-animations.js"></script>
     <script>
         // =============== API Configuration ===============
         const API_BASE_URL = 'http://localhost:5000/api';
@@ -904,6 +914,24 @@
             }
         }
 
+        function toggleDarkMode() {
+            darkModeManager.toggle();
+            updateThemeButtonUI();
+        }
+
+        function updateThemeButtonUI() {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            
+            if (darkModeManager.isDark()) {
+                icon.textContent = '☀️';
+                label.textContent = 'Light';
+            } else {
+                icon.textContent = '🌙';
+                label.textContent = 'Dark';
+            }
+        }
+
         // =============== Utility Functions ===============
         async function fetchAPI(endpoint, options = {}) {
             try {
@@ -924,17 +952,23 @@
                 if (response.status === 401) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
+                    toast.warning('Session expired. Please login again.');
                     window.location.href = 'login.html';
                     return null;
                 }
                 
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error || `API Error: ${response.status}`;
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
                 }
                 
                 return await response.json();
             } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
+                if (!error.message.includes('API Error')) {
+                    toast.error(`Connection error: ${error.message}`);
+                }
                 return null;
             }
         }
@@ -976,6 +1010,8 @@
 
         // =============== Dashboard Functions ===============
         async function loadDashboard() {
+            loadingManager.showOverlay('Loading dashboard...');
+
             // Load teacher's subjects and classes
             await loadSubjects();
             await loadClasses();
@@ -991,6 +1027,8 @@
             // Count results
             const resultsData = await fetchAPI('/results');
             document.getElementById('resultsCount').textContent = resultsData ? resultsData.length : 0;
+
+            loadingManager.hideOverlay();
         }
 
         // =============== Subjects Functions ===============
@@ -1084,26 +1122,41 @@
         }
 
         async function saveResult(studentId, subjectId) {
-            const ca = parseFloat(document.querySelector(`.ca-${studentId}`).value) || 0;
-            const assign = parseFloat(document.querySelector(`.assign-${studentId}`).value) || 0;
+            const button = event.target;
+            loadingManager.showButton(button, 'Saving...');
+            uiAnimationsManager.animateButtonClick(button);
+
+            const ca1 = parseFloat(document.querySelector(`.ca1-${studentId}`).value) || 0;
+            const ca2 = parseFloat(document.querySelector(`.ca2-${studentId}`).value) || 0;
             const exam = parseFloat(document.querySelector(`.exam-${studentId}`).value) || 0;
+            
+            // Validate scores
+            if (ca1 < 0 || ca1 > 10 || ca2 < 0 || ca2 > 10 || exam < 0 || exam > 80) {
+                toast.error('Invalid score range: CA (0-10), Exam (0-80)');
+                loadingManager.hideButton(button);
+                return;
+            }
             
             const result = {
                 student_id: studentId,
                 subject_id: subjectId,
-                continuous_assessment: ca,
-                assignment: assign,
-                exam_score: exam,
-                session_id: 1 // Default to first session
+                term_id: 1, // Default to first term
+                ca1: ca1,
+                ca2: ca2,
+                exam: exam
             };
             
             const response = await fetchAPI('/results', {
                 method: 'POST',
                 body: JSON.stringify(result)
             });
-            
+
+            loadingManager.hideButton(button);
+
             if (response) {
-                showAlert('Result saved successfully!', 'success');
+                uiAnimationsManager.animateSuccess(button);
+                toast.success(`Result saved! Grade: ${response.grade}`);
+                loadResults();
             }
         }
 

@@ -190,25 +190,32 @@ class Student(db.Model):
     __tablename__ = 'students'
     
     id = db.Column(db.Integer, primary_key=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('parents.id'))  # Link to parent
-    admission_number = db.Column(db.String(50), nullable=False, unique=True)
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False, index=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('parents.id'), index=True)  # Link to parent
+    admission_number = db.Column(db.String(50), nullable=False, unique=True, index=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
     gender = db.Column(db.String(10))  # Male, Female
-    email = db.Column(db.String(100))
+    email = db.Column(db.String(100), index=True)
     phone = db.Column(db.String(20))
     parent_name = db.Column(db.String(100))
     parent_phone = db.Column(db.String(20))
     photo_filename = db.Column(db.String(255))  # Student photo/picture
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     results = db.relationship('Result', backref='student', lazy=True, cascade='all, delete-orphan')
+    
+    @property
+    def full_name(self):
+        """Get student's full name"""
+        if self.middle_name:
+            return f"{self.first_name} {self.middle_name} {self.last_name}".strip()
+        return f"{self.first_name} {self.last_name}".strip()
     
     def to_dict(self):
         return {
@@ -219,7 +226,7 @@ class Student(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'middle_name': self.middle_name,
-            'full_name': f"{self.first_name} {self.middle_name or ''} {self.last_name}".strip(),
+            'full_name': self.full_name,
             'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
             'gender': self.gender,
             'email': self.email,
@@ -235,20 +242,25 @@ class Teacher(db.Model):
     __tablename__ = 'teachers'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # Link to user for authentication
-    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False)
-    staff_id = db.Column(db.String(50), nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)  # Link to user for authentication
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False, index=True)
+    staff_id = db.Column(db.String(50), nullable=False, unique=True, index=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100))
+    email = db.Column(db.String(100), index=True)
     phone = db.Column(db.String(20))
     qualification = db.Column(db.String(100))
     specialization = db.Column(db.String(100))
     photo_filename = db.Column(db.String(255))  # Teacher photo/picture
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     subjects_taught = db.relationship('Subject', backref='teacher', lazy=True)
+    
+    @property
+    def full_name(self):
+        """Get teacher's full name"""
+        return f"{self.first_name} {self.last_name}".strip()
     
     def to_dict(self):
         return {
@@ -257,7 +269,7 @@ class Teacher(db.Model):
             'staff_id': self.staff_id,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'full_name': f"{self.first_name} {self.last_name}",
+            'full_name': self.full_name,
             'email': self.email,
             'specialization': self.specialization,
             'photo_filename': self.photo_filename,
@@ -271,13 +283,13 @@ class Subject(db.Model):
     __tablename__ = 'subjects'
     
     id = db.Column(db.Integer, primary_key=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False)
-    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False, index=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), index=True)
     name = db.Column(db.String(100), nullable=False)  # e.g., Mathematics, English
-    code = db.Column(db.String(20))
+    code = db.Column(db.String(20), index=True)
     description = db.Column(db.Text)
     credit_hours = db.Column(db.Integer, default=0)
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     results = db.relationship('Result', backref='subject', lazy=True, cascade='all, delete-orphan')
@@ -300,9 +312,9 @@ class Result(db.Model):
     __tablename__ = 'results'
     
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
-    term_id = db.Column(db.Integer, db.ForeignKey('terms.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False, index=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False, index=True)
+    term_id = db.Column(db.Integer, db.ForeignKey('terms.id'), nullable=False, index=True)
     
     # Assessment scores
     ca1 = db.Column(db.Float, default=0)  # 1st Continuous Assessment (0-10)
@@ -310,7 +322,7 @@ class Result(db.Model):
     exam = db.Column(db.Float, default=0)  # Exam score (0-80)
     
     total_score = db.Column(db.Float, default=0)  # Calculated: ca1 + ca2 + exam
-    grade = db.Column(db.String(2))  # A, B, C, D, E, F
+    grade = db.Column(db.String(2), index=True)  # A, B, C, D, E, F
     remarks = db.Column(db.String(100))  # Excellent, Very Good, Good, Fair, Pass, Fail
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

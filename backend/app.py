@@ -3,6 +3,8 @@ Flask application factory for FVS Result Management System
 """
 from flask import Flask, jsonify, send_from_directory, render_template_string, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import config
 from models import db, User
 import os
@@ -25,7 +27,28 @@ def create_app(config_name=None):
     
     # Initialize extensions
     db.init_app(app)
-    CORS(app)
+    
+    # Setup CORS with security restrictions
+    allowed_origins = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5000,http://127.0.0.1:5000').split(',')
+    CORS(app,
+         resources={r"/api/*": {
+             "origins": allowed_origins,
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization"],
+             "max_age": 600,
+             "supports_credentials": True
+         }}
+    )
+    
+    # Setup rate limiting
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        storage_uri='memory://',
+        default_limits=["500 per day", "100 per hour"],
+        strategy="fixed-window"
+    )
+    app.limiter = limiter
     
     # Register blueprints
     from routes import school_bp, student_bp, teacher_bp, subject_bp, result_bp, class_bp, academic_bp, auth_bp, parent_bp, analytics_bp, export_bp, photo_bp, email_bp
